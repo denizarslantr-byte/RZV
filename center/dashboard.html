@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Piano Deri Merkez V6.0</title>
+  <link rel="stylesheet" href="../assets/piano-theme.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="app">
+
+  <div class="app-brand">
+    <div class="p">P</div>
+    <div class="name">PIANO DERİ</div>
+    <div class="sub">MERKEZ OPERASYON — V6.0</div>
+  </div>
+
+  <div id="apiWarning" class="notice" style="display:none"></div>
+
+  <!-- Üst çubuk: tarih + export -->
+  <div class="panel-card" style="padding:12px 16px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div>
+        <label style="margin-bottom:3px">Tarih</label>
+        <input type="date" id="datePicker" onchange="loadAll()" style="width:160px">
+      </div>
+      <div style="align-self:flex-end">
+        <button class="btn-dark" onclick="loadAll()">↺ Yenile</button>
+      </div>
+      <div style="flex:1"></div>
+      <button class="btn-gold" onclick="exportXLS()" title="O günkü programları Excel'e aktar">
+        ⬇ Dışa Aktar (.xls)
+      </button>
+    </div>
+  </div>
+
+  <div class="center-layout">
+
+    <!-- ── Sol Menü ── -->
+    <aside class="side-menu panel-card">
+      <button id="mnHome"   class="btn-dark active-menu" onclick="showSection('homeSection','mnHome')">🏠 Ana Ekran</button>
+      <button id="mnManual" class="btn-dark" onclick="showSection('manualSection','mnManual')">✏️ Elle Rezervasyon</button>
+      <button id="mnRapor"  class="btn-dark" onclick="showSection('raporSection','mnRapor');loadRapor()">📊 Raporlar</button>
+      <button id="mnStaff"  class="btn-dark" onclick="showSection('staffSection','mnStaff')">👥 Personeller</button>
+      <button id="mnOff"    class="btn-dark" onclick="showSection('offSection','mnOff')">🏖 İzin Girişi</button>
+      <hr class="divider">
+      <button class="btn-dark" onclick="location.href='../admin/admin.html'">⚙️ Admin</button>
+      <button class="btn-dark" onclick="location.href='../hotel/login.html'">🏨 Otel Giriş</button>
+    </aside>
+
+    <!-- ── Ana İçerik ── -->
+    <main>
+
+      <!-- ANA EKRAN -->
+      <section id="homeSection" class="section active">
+        <div id="reservationList"></div>
+      </section>
+
+      <!-- ELLE REZERVASYON -->
+      <section id="manualSection" class="section">
+        <div class="panel-card">
+          <div class="top-bar">
+            <h2 id="manualTitle">✏️ Elle Rezervasyon</h2>
+          </div>
+          <input type="hidden" id="editResId">
+          <div class="grid grid4">
+            <div>
+              <label>Otel</label>
+              <input id="centerHotel" list="hotelListEl" placeholder="Otel adı">
+              <datalist id="hotelListEl"></datalist>
+            </div>
+            <div><label>Tarih</label><input type="date" id="centerDate"></div>
+            <div><label>Saat</label><input type="time" id="centerTime"></div>
+            <div>
+              <label>Uyruk</label>
+              <select id="centerNation"></select>
+            </div>
+          </div>
+          <br>
+          <div class="grid grid4">
+            <div><label>Yetişkin</label><input type="number" id="centerAdult" value="2" min="0"></div>
+            <div><label>Çocuk</label><input type="number" id="centerChild" value="0" min="0"></div>
+            <div><label>KART</label><input id="centerKart" placeholder="Kart türü"></div>
+            <div><label>AYAK</label><input id="centerAyak" placeholder="Ayak türü"></div>
+          </div>
+          <br>
+          <label>Not</label>
+          <textarea id="centerNotes" placeholder="Özel istekler..."></textarea>
+          <br><br>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-gold" onclick="saveCenterReservation()">💾 KAYDET</button>
+            <button class="btn-dark" onclick="clearManualForm()">🗑 Temizle</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- RAPORLAR -->
+      <section id="raporSection" class="section">
+        <div class="panel-card">
+          <div class="top-bar">
+            <h2>📊 Raporlar</h2>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn-dark btn-sm" onclick="setRaporRange('today')">Bugün</button>
+              <button class="btn-dark btn-sm" onclick="setRaporRange('week')">Bu Hafta</button>
+              <button class="btn-dark btn-sm" onclick="setRaporRange('month')">Bu Ay</button>
+              <input type="date" id="rStart" style="width:135px">
+              <span style="color:var(--text2);align-self:center">—</span>
+              <input type="date" id="rEnd"   style="width:135px">
+              <button class="btn-gold btn-sm" onclick="loadRapor()">Uygula</button>
+              <button class="btn-dark btn-sm" onclick="exportRaporCSV()">⬇ CSV</button>
+            </div>
+          </div>
+          <div id="raporContent" style="margin-top:14px"></div>
+        </div>
+      </section>
+
+      <!-- PERSONELLER -->
+      <section id="staffSection" class="section">
+        <div class="panel-card">
+          <div class="top-bar"><h2>👥 Personel Yönetimi</h2></div>
+          <div style="display:flex;gap:8px;margin-bottom:14px">
+            <input id="staffName" placeholder="Yeni personel adı" style="flex:1">
+            <button class="btn-gold" onclick="addStaff()">+ Ekle</button>
+          </div>
+          <div id="allStaffList"></div>
+        </div>
+      </section>
+
+      <!-- İZİN GİRİŞİ -->
+      <section id="offSection" class="section">
+        <div class="panel-card">
+          <div class="top-bar"><h2>🏖 İzin Girişi</h2></div>
+          <div class="grid grid3">
+            <div>
+              <label>İzin Tarihi</label>
+              <input type="date" id="offDate">
+            </div>
+            <div>
+              <label>Personel</label>
+              <select id="offStaffSelect" style="width:100%"></select>
+            </div>
+            <div style="align-self:flex-end;display:flex;gap:7px">
+              <button class="btn-gold" onclick="makeOff(true)"  style="flex:1">✅ İzinli Yap</button>
+              <button class="btn-dark" onclick="makeOff(false)" style="flex:1">✗ İzni Kaldır</button>
+            </div>
+          </div>
+          <div id="offFeedback" style="margin-top:12px"></div>
+          <hr class="divider">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Seçilen tarihteki izinli personel:</div>
+          <div id="offCurrentList" class="staff-list"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ── Sağ Panel ── -->
+    <aside>
+      <div class="panel-card">
+        <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+          Personel Durumu · <b id="selectedDateLabel" style="color:var(--gold)"></b>
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Boşta <span id="freeCount" style="color:var(--gold2)"></span></div>
+          <div id="freeStaffList" class="staff-list"></div>
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Programda <span id="busyCount" style="color:var(--gold2)"></span></div>
+          <div id="busyStaffList" class="staff-list"></div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">İzinli <span id="offCount" style="color:var(--gold2)"></span></div>
+          <div id="offStaffList" class="staff-list"></div>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Günlük Özet</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="text-align:center">
+            <div id="sumTotal" style="font-size:22px;font-weight:900;color:var(--gold2)">—</div>
+            <div style="font-size:9px;color:var(--text2)">REZERVASYON</div>
+          </div>
+          <div style="text-align:center">
+            <div id="sumPax" style="font-size:22px;font-weight:900;color:var(--gold2)">—</div>
+            <div style="font-size:9px;color:var(--text2)">TOPLAM PAX</div>
+          </div>
+          <div style="text-align:center">
+            <div id="sumIn" style="font-size:22px;font-weight:900;color:#fde68a">—</div>
+            <div style="font-size:9px;color:var(--text2)">İÇERİDE</div>
+          </div>
+          <div style="text-align:center">
+            <div id="sumOut" style="font-size:22px;font-weight:900;color:#bbf7d0">—</div>
+            <div style="font-size:9px;color:var(--text2)">TAMAMLANDI</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../assets/common.js"></script>
+<script>
+showApiWarning();
+
+let reservations = [], staff = [], hotels = [];
+const today = todayStr();
+datePicker.value  = today;
+centerDate.value  = today;
+centerTime.value  = "10:30";
+offDate.value     = today;
+rStart.value      = today;
+rEnd.value        = today;
+
+// Uyruk dropdown doldur
+centerNation.innerHTML = nationOptions("RUS");
+
+// ── Sekme ────────────────────────────────────────────────────
+function showSection(id, btnId) {
+  document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  document.querySelectorAll(".side-menu button").forEach(b => b.classList.remove("active-menu"));
+  if (btnId) document.getElementById(btnId).classList.add("active-menu");
+}
+
+// ── Veri Yükleme ─────────────────────────────────────────────
+async function loadAll() {
+  selectedDateLabel.innerText = datePicker.value;
+  [reservations, staff, hotels] = await Promise.all([
+    apiGet("getReservations", { date: datePicker.value }),
+    apiGet("getStaff"),
+    apiGet("getHotels")
+  ]);
+  if (!Array.isArray(reservations)) reservations = [];
+  if (!Array.isArray(staff))        staff = [];
+  if (!Array.isArray(hotels))       hotels = [];
+  renderHotelDatalist();
+  renderReservations();
+  renderStaffPanel();
+  renderSummary();
+  renderOffSection();
+}
+
+function renderHotelDatalist() {
+  hotelListEl.innerHTML = hotels.map(h => `<option value="${h.hotel}"></option>`).join("");
+}
+
+// ── Personel Yardımcıları ─────────────────────────────────────
+function isOff(s, date = datePicker.value) {
+  return String(s.offDates || "").split(",").map(x => x.trim()).filter(Boolean).includes(date);
+}
+
+function busySet() {
+  const u = new Set();
+  reservations.forEach(r => {
+    if (r.status === "CANCELLED") return;
+    if (String(r.cikti).toUpperCase() === "TRUE") return;
+    [r.staff1, r.staff2, r.staff3, r.staff4].filter(Boolean).forEach(x => u.add(x));
+  });
+  return u;
+}
+
+function freeStaff()  { const b = busySet(); return staff.filter(s => s.status === "ACTIVE" && !isOff(s) && !b.has(s.name)); }
+function busyStaff2() { const b = busySet(); return staff.filter(s => b.has(s.name)); }
+function offStaff()   { return staff.filter(s => isOff(s)); }
+
+function staffOpts(current = "") {
+  const opts = ['<option value="">Boş</option>'];
+  const free = freeStaff().map(s => s.name);
+  if (current && !free.includes(current)) free.unshift(current);
+  free.forEach(n => opts.push(`<option${n===current?" selected":""}>${n}</option>`));
+  return opts.join("");
+}
+
+function renderStaffPanel() {
+  const f = freeStaff(), b = busyStaff2(), o = offStaff();
+  freeCount.innerText = `(${f.length})`;
+  busyCount.innerText = `(${b.length})`;
+  offCount.innerText  = `(${o.length})`;
+  freeStaffList.innerHTML = f.length ? f.map(s=>`<span class="staff-pill staff-free">${s.name}</span>`).join("") : '<span style="color:var(--text2);font-size:11px">—</span>';
+  busyStaffList.innerHTML = b.length ? b.map(s=>`<span class="staff-pill staff-busy">${s.name}</span>`).join("") : '<span style="color:var(--text2);font-size:11px">—</span>';
+  offStaffList.innerHTML  = o.length ? o.map(s=>`<span class="staff-pill staff-off">${s.name}</span>`).join("")  : '<span style="color:var(--text2);font-size:11px">—</span>';
+
+  // Personel yönetim listesi
+  allStaffList.innerHTML = staff.map(s => `
+    <div class="panel-card" style="padding:10px;margin-bottom:7px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <b style="flex:1">${s.name}</b>
+      ${isOff(s) ? '<span class="badge off">İZİNLİ</span>' : '<span class="badge exited">AKTİF</span>'}
+      <button class="btn-red btn-sm" onclick="deleteStaff('${s.id}')">Sil</button>
+    </div>`).join("") || '<div style="color:var(--text2)">Personel yok.</div>';
+
+  // İzin ekranı dropdown
+  offStaffSelect.innerHTML = staff.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
+}
+
+function renderSummary() {
+  const total = reservations.length;
+  const pax   = reservations.reduce((s,r) => s + (Number(r.adult)||0) + (Number(r.child)||0), 0);
+  const inside= reservations.filter(r => String(r.girdi).toUpperCase()==="TRUE" && String(r.cikti).toUpperCase()!=="TRUE" && r.status!=="CANCELLED").length;
+  const done  = reservations.filter(r => String(r.cikti).toUpperCase()==="TRUE").length;
+  sumTotal.innerText = total;
+  sumPax.innerText   = pax;
+  sumIn.innerText    = inside;
+  sumOut.innerText   = done;
+}
+
+function renderOffSection() {
+  const o = offStaff();
+  offCurrentList.innerHTML = o.length
+    ? o.map(s => `<span class="staff-pill staff-off">${s.name}</span>`).join("")
+    : '<span style="color:var(--text2);font-size:11px">İzinli personel yok.</span>';
+}
+
+// ── Rezervasyon Listesi ────────────────────────────────────────
+function rowClass(r) {
+  if (r.status === "CANCELLED") return "row-cancel";
+  if (String(r.cikti).toUpperCase() === "TRUE") return "row-cikti";
+  if (String(r.girdi).toUpperCase() === "TRUE")  return "row-girdi";
+  return "";
+}
+
+function badge(r) {
+  if (r.status === "CANCELLED") return '<span class="badge cancelled">İPTAL</span>';
+  if (String(r.cikti).toUpperCase() === "TRUE") return '<span class="badge exited">ÇIKTI</span>';
+  if (String(r.girdi).toUpperCase() === "TRUE")  return '<span class="badge entered">GİRDİ</span>';
+  if (r.status === "UPDATED")   return '<span class="badge updated">GÜNCELLENDİ</span>';
+  return `<span class="badge pending">BEKLİYOR</span>`;
+}
+
+function renderReservations() {
+  const grouped = {};
+  reservations.forEach(r => { if (!grouped[r.time]) grouped[r.time] = []; grouped[r.time].push(r); });
+  const keys = Object.keys(grouped).sort();
+
+  if (!keys.length) {
+    reservationList.innerHTML = '<div class="panel-card" style="text-align:center;color:var(--text2);padding:32px">Bu tarihte rezervasyon yok.</div>';
+    return;
+  }
+
+  reservationList.innerHTML = keys.map(t => `
+    <div class="time-title">⏰ ${t}
+      <span style="font-size:12px;font-weight:400;color:var(--text2);margin-left:8px">${grouped[t].length} rezervasyon</span>
+    </div>
+    <div class="panel-card table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Girdi</th><th>Çıktı</th><th>Çıkış Saati</th>
+            <th>Tarih</th><th>Saat</th><th>Otel</th>
+            <th>Yetişkin</th><th>Çocuk</th><th>Uyruk</th><th>Not</th>
+            <th>Durum</th><th>Kart</th><th>Ayak</th>
+            <th>T1</th><th>T2</th><th>T3</th><th>T4</th>
+            <th>İşlem</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${grouped[t].map(r => {
+            const dis = r.status === "CANCELLED" ? "disabled" : "";
+            return `
+              <tr class="${rowClass(r)}">
+                <td><input type="checkbox" class="check-big" ${String(r.girdi).toUpperCase()==="TRUE"?"checked":""} onchange="updateGirdi('${r.id}',this.checked)" ${dis}></td>
+                <td><input type="checkbox" class="check-big" ${String(r.cikti).toUpperCase()==="TRUE"?"checked":""} onchange="updateCikti('${r.id}',this.checked)" ${dis}></td>
+                <td><input type="time" class="ti" id="csaat_${r.id}" value="${r.ciktiSaati||''}" ${dis}></td>
+                <td>${r.date}</td>
+                <td><b>${r.time}</b></td>
+                <td>${r.hotel}</td>
+                <td>${r.adult}</td>
+                <td>${r.child}</td>
+                <td>${r.nation}</td>
+                <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis">${r.notes||""}</td>
+                <td>${badge(r)}</td>
+                <td><input class="ci" id="kart_${r.id}" value="${r.kart||''}" ${dis}></td>
+                <td><input class="ci" id="ayak_${r.id}" value="${r.ayak||''}" ${dis}></td>
+                <td><select class="si" id="s1_${r.id}" ${dis}>${staffOpts(r.staff1)}</select></td>
+                <td><select class="si" id="s2_${r.id}" ${dis}>${staffOpts(r.staff2)}</select></td>
+                <td><select class="si" id="s3_${r.id}" ${dis}>${staffOpts(r.staff3)}</select></td>
+                <td><select class="si" id="s4_${r.id}" ${dis}>${staffOpts(r.staff4)}</select></td>
+                <td class="action-cell">
+                  <button class="btn-dark btn-sm" onclick="saveOps('${r.id}')" ${dis}>💾 Kaydet</button>
+                  <button class="btn-blue btn-sm" onclick='editCenter(${JSON.stringify(r).replace(/'/g,"&#39;")})' ${dis}>✏️ Düzelt</button>
+                  <button class="btn-red  btn-sm" onclick="cancelRes('${r.id}')" ${dis}>❌ İptal</button>
+                </td>
+              </tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>`).join("");
+}
+
+// ── Rezervasyon İşlemleri ─────────────────────────────────────
+async function updateGirdi(id, checked) {
+  await apiPost("updateReservationOps", { id, girdi: checked?"TRUE":"", status: checked?"IN_STORE":"PENDING" });
+  await loadAll();
+}
+
+async function updateCikti(id, checked) {
+  const csaat = document.getElementById("csaat_"+id)?.value || "";
+  const now   = checked ? (csaat || new Date().toTimeString().slice(0,5)) : "";
+  if (checked && document.getElementById("csaat_"+id)) document.getElementById("csaat_"+id).value = now;
+  await apiPost("updateReservationOps", { id, cikti: checked?"TRUE":"", ciktiSaati: now, status: checked?"EXITED":"IN_STORE" });
+  await loadAll();
+}
+
+async function saveOps(id) {
+  const st = ["s1_","s2_","s3_","s4_"].map(p => document.getElementById(p+id)?.value || "").filter(Boolean);
+  if (new Set(st).size !== st.length) return showToast("Aynı tezgahtar birden fazla seçilemez", "err");
+  await apiPost("updateReservationOps", {
+    id,
+    kart:       document.getElementById("kart_"+id)?.value || "",
+    ayak:       document.getElementById("ayak_"+id)?.value || "",
+    ciktiSaati: document.getElementById("csaat_"+id)?.value || "",
+    staff1:     document.getElementById("s1_"+id)?.value || "",
+    staff2:     document.getElementById("s2_"+id)?.value || "",
+    staff3:     document.getElementById("s3_"+id)?.value || "",
+    staff4:     document.getElementById("s4_"+id)?.value || "",
+    status:     "UPDATED"
+  });
+  showToast("✅ Kaydedildi");
+  await loadAll();
+}
+
+function editCenter(r) {
+  editResId.value    = r.id;
+  manualTitle.innerText = "✏️ Rezervasyon Düzelt";
+  centerHotel.value  = r.hotel;
+  centerDate.value   = r.date;
+  centerTime.value   = r.time;
+  centerAdult.value  = r.adult;
+  centerChild.value  = r.child;
+  centerNation.value = r.nation || "RUS";
+  centerNotes.value  = r.notes || "";
+  centerKart.value   = r.kart  || "";
+  centerAyak.value   = r.ayak  || "";
+  showSection("manualSection","mnManual");
+}
+
+function clearManualForm() {
+  editResId.value = "";
+  manualTitle.innerText = "✏️ Elle Rezervasyon";
+  centerHotel.value = ""; centerDate.value = today; centerTime.value = "10:30";
+  centerAdult.value = 2; centerChild.value = 0;
+  centerNation.value = "RUS"; centerNotes.value = ""; centerKart.value = ""; centerAyak.value = "";
+}
+
+async function saveCenterReservation() {
+  if (!centerHotel.value || !centerDate.value || !centerTime.value)
+    return showToast("Otel, tarih ve saat zorunlu", "err");
+  const body = {
+    date: centerDate.value, time: centerTime.value, hotel: centerHotel.value,
+    adult: centerAdult.value, child: centerChild.value,
+    nation: centerNation.value, notes: centerNotes.value,
+    kart: centerKart.value, ayak: centerAyak.value,
+    status: editResId.value ? "UPDATED" : "PENDING"
+  };
+  if (editResId.value) body.id = editResId.value;
+  const r = editResId.value
+    ? await apiPost("updateReservation", body)
+    : await apiPost("addReservation", body);
+  if (r.success) {
+    datePicker.value = body.date;
+    clearManualForm();
+    showSection("homeSection","mnHome");
+    showToast(editResId.value ? "✅ Rezervasyon güncellendi" : "✅ Rezervasyon kaydedildi");
+    await loadAll();
+  } else {
+    showToast("❌ " + (r.message||"Kayıt başarısız"), "err");
+  }
+}
+
+async function cancelRes(id) {
+  if (!confirm("Bu rezervasyon iptal edilsin mi? Otel tarafında da iptal görünecek.")) return;
+  const r = await apiGet("cancelReservation", { id });
+  if (r.success) { showToast("Rezervasyon iptal edildi"); await loadAll(); }
+  else showToast("İptal başarısız", "err");
+}
+
+// ── Personel İşlemleri ────────────────────────────────────────
+async function addStaff() {
+  const name = staffName.value.trim();
+  if (!name) return showToast("Personel adı yazın", "err");
+  const r = await apiPost("addStaff", { name });
+  if (r.success) { staffName.value = ""; showToast("✅ " + name + " eklendi"); await loadAll(); }
+  else showToast("❌ " + (r.message||"Hata"), "err");
+}
+
+async function deleteStaff(id) {
+  if (!confirm("Personel silinsin mi?")) return;
+  await apiGet("deleteStaff", { id });
+  showToast("Personel silindi");
+  await loadAll();
+}
+
+// ── İzin ─────────────────────────────────────────────────────
+async function makeOff(off) {
+  const id   = offStaffSelect.value;
+  const date = offDate.value;
+  if (!id)   return showToast("Personel seçin", "err");
+  if (!date) return showToast("Tarih seçin", "err");
+
+  const r = await apiPost("setStaffOff", { id, date, off });
+
+  if (r.success) {
+    const name = staff.find(s => s.id == id)?.name || "";
+    showToast(off ? `✅ ${name} — ${date} izinli yapıldı` : `✅ ${name} — ${date} izni kaldırıldı`);
+    datePicker.value = date;
+    await loadAll();
+    // İzin bölümünü de güncelle
+    renderOffSection();
+    offFeedback.innerHTML = `<div class="ok" style="margin:0">
+      ${off ? `<b>${name}</b> <b>${date}</b> tarihinde izinli yapıldı.` : `<b>${name}</b> <b>${date}</b> tarihindeki izni kaldırıldı.`}
+    </div>`;
+    setTimeout(() => offFeedback.innerHTML = "", 4000);
+  } else {
+    showToast("❌ " + (r.message||"Hata"), "err");
+  }
+}
+
+// ── Raporlar ─────────────────────────────────────────────────
+let raporData = null, raporPerf = null;
+
+function setRaporRange(range) {
+  const t = todayStr();
+  if (range === "today")  { rStart.value = t; rEnd.value = t; }
+  else if (range === "week")  { rStart.value = weekStart(t); rEnd.value = t; }
+  else if (range === "month") { rStart.value = monthStart(t); rEnd.value = t; }
+  loadRapor();
+}
+
+async function loadRapor() {
+  if (!checkApiConfig()) return;
+  const s = rStart.value || todayStr();
+  const e = rEnd.value   || todayStr();
+  raporContent.innerHTML = '<div style="color:var(--text2);text-align:center;padding:20px">Yükleniyor...</div>';
+  [raporData, raporPerf] = await Promise.all([
+    apiGet("getStats",           { startDate: s, endDate: e }),
+    apiGet("getStaffPerformance", { startDate: s, endDate: e })
+  ]);
+  if (!raporData?.success) { raporContent.innerHTML = '<div class="notice">Veri alınamadı.</div>'; return; }
+  renderRapor(s, e);
+}
+
+function bar(label, val, max, cls="") {
+  const pct = max > 0 ? Math.round(val/max*100) : 0;
+  return `<div class="bar-row">
+    <span class="bar-label">${label}</span>
+    <div class="bar-track"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
+    <span class="bar-value">${val}</span>
+  </div>`;
+}
+
+function renderRapor(s, e) {
+  const d = raporData;
+  const topHotel = Object.entries(d.byHotel||{}).sort((a,b)=>b[1]-a[1])[0]?.[0] || "—";
+  const topHour  = Object.entries(d.byHour ||{}).sort((a,b)=>b[1]-a[1])[0]?.[0] || "—";
+
+  const nationEnt = Object.entries(d.byNation||{}).sort((a,b)=>b[1]-a[1]);
+  const hotelEnt  = Object.entries(d.byHotel ||{}).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const dayEnt    = Object.entries(d.byDay   ||{}).sort((a,b)=>a[0].localeCompare(b[0]));
+  const statusEnt = Object.entries(d.byStatus||{}).sort((a,b)=>b[1]-a[1]);
+  const mxN = Math.max(...nationEnt.map(x=>x[1]),1);
+  const mxH = Math.max(...hotelEnt.map(x=>x[1]),1);
+  const mxD = Math.max(...dayEnt.map(x=>x[1]),1);
+  const mxP = raporPerf?.length ? raporPerf[0].count : 1;
+
+  raporContent.innerHTML = `
+    <!-- Özet Kartlar -->
+    <div class="stat-cards">
+      <div class="stat-card"><div class="s-val">${d.totalRes}</div><div class="s-lbl">Toplam Rezervasyon</div></div>
+      <div class="stat-card"><div class="s-val">${d.totalPax}</div><div class="s-lbl">Toplam PAX</div></div>
+      <div class="stat-card"><div class="s-val" style="font-size:16px">${topHotel}</div><div class="s-lbl">En Yoğun Otel</div></div>
+      <div class="stat-card"><div class="s-val">${topHour}:xx</div><div class="s-lbl">En Kalabalık Saat</div></div>
+    </div>
+
+    <!-- Durum Özeti -->
+    <div class="panel-card" style="margin-bottom:12px">
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Rezervasyon Durumları</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${statusEnt.map(([st,n])=>`<span class="badge ${statusBadgeClass(st)}" style="font-size:12px">${statusLabel(st)}: ${n}</span>`).join("")}
+      </div>
+    </div>
+
+    <!-- 3 Kolon: Uyruk, Otel, Saat -->
+    <div class="grid grid3" style="gap:12px;margin-bottom:12px">
+      <div class="panel-card">
+        <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🌍 Uyruk Dağılımı</div>
+        <div class="bar-chart">${nationEnt.map(([l,v])=>bar(l,v,mxN)).join("")}</div>
+      </div>
+      <div class="panel-card">
+        <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🏨 Otel Yoğunluğu (Karşılaştırmalı)</div>
+        <div class="bar-chart">${hotelEnt.map(([l,v])=>bar(l,v,mxH,"blue")).join("")}</div>
+      </div>
+      <div class="panel-card">
+        <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">⏰ Saat Dağılımı</div>
+        <div class="bar-chart">
+          ${Object.entries(d.byHour||{}).sort((a,b)=>a[0].localeCompare(b[0])).map(([l,v])=>bar(l+":00",v,Math.max(...Object.values(d.byHour||{1:1}),1),"green")).join("")}
+        </div>
+      </div>
+    </div>
+
+    <!-- Günlük Trend -->
+    ${dayEnt.length > 1 ? `
+    <div class="panel-card" style="margin-bottom:12px">
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📅 Günlük Trend (${s} — ${e})</div>
+      <div class="bar-chart">${dayEnt.map(([l,v])=>bar(l.slice(5),v,mxD,"blue")).join("")}</div>
+    </div>` : ""}
+
+    <!-- Personel Performansı -->
+    <div class="panel-card">
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🏆 Personel Performansı</div>
+      ${!raporPerf?.length
+        ? '<div style="color:var(--text2);text-align:center;padding:16px">Bu dönemde atama yok.</div>'
+        : raporPerf.map((p,i) => `
+          <div class="perf-row">
+            <div class="perf-rank ${i===0?"rank-1":i===1?"rank-2":i===2?"rank-3":"rank-n"}">${i===0?"🥇":i===1?"🥈":i===2?"🥉":i+1}</div>
+            <div class="perf-name">${p.name}</div>
+            <div class="perf-meta">${p.count} seans · ${p.pax} pax</div>
+            <div class="perf-bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:${Math.round(p.count/mxP*100)}%"></div></div></div>
+          </div>`).join("")
+      }
+    </div>`;
+}
+
+function statusBadgeClass(s) {
+  if (s==="CANCELLED") return "cancelled";
+  if (s==="EXITED" || s==="IN_STORE") return "entered";
+  if (s==="UPDATED") return "updated";
+  return "pending";
+}
+
+function exportRaporCSV() {
+  if (!raporData) return showToast("Önce rapor yükleyin","err");
+  const rows = [];
+  const n = raporData.byNation||{};
+  rows.push(["UYRUK","REZERVASYON SAYISI"]);
+  Object.entries(n).sort((a,b)=>b[1]-a[1]).forEach(([k,v]) => rows.push([k,v]));
+  rows.push([]);
+  rows.push(["OTEL","REZERVASYON SAYISI"]);
+  Object.entries(raporData.byHotel||{}).sort((a,b)=>b[1]-a[1]).forEach(([k,v]) => rows.push([k,v]));
+  rows.push([]);
+  rows.push(["TOPLAM REZERVASYON", raporData.totalRes]);
+  rows.push(["TOPLAM PAX", raporData.totalPax]);
+  exportCSV(
+    "",
+    rows.map(r => r.join(",")),
+    `piano-deri-rapor-${rStart.value||todayStr()}.csv`
+  );
+}
+
+// ── Dışa Aktar (.xls) ────────────────────────────────────────
+function exportXLS() {
+  if (!reservations.length) return showToast("Aktarılacak rezervasyon yok","err");
+
+  // Hotel → acentaCode haritası
+  const acentaMap = {};
+  hotels.forEach(h => { acentaMap[h.hotel] = h.acentaCode || ""; });
+
+  const headers = [
+    "ACENTAKOD","TARİH","SAAT","OTEL","YETİŞKİN","ÇOCUK","UYRUK","NOT",
+    "DURUM","KART","AYAK","T1","T2","T3","T4","GİRDİ","ÇIKTI","ÇIKIŞ SAATİ"
+  ];
+
+  const rows = reservations.map(r => [
+    acentaMap[r.hotel] || "",
+    r.date, r.time, r.hotel,
+    Number(r.adult)||0, Number(r.child)||0,
+    r.nation, r.notes||"",
+    statusLabel(r.status),
+    r.kart||"", r.ayak||"",
+    r.staff1||"", r.staff2||"", r.staff3||"", r.staff4||"",
+    String(r.girdi).toUpperCase()==="TRUE" ? "EVET" : "",
+    String(r.cikti).toUpperCase()==="TRUE" ? "EVET" : "",
+    r.ciktiSaati||""
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+  // Kolon genişlikleri
+  ws["!cols"] = [8,12,8,22,10,8,14,20,14,12,12,14,14,14,14,8,8,12].map(w => ({wch:w}));
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "sayfa1");
+  XLSX.writeFile(wb, `piano-deri-${datePicker.value}.xls`, { bookType: "xls" });
+  showToast(`✅ Excel dosyası indirildi (${reservations.length} kayıt)`);
+}
+
+// ── Bootstrap ─────────────────────────────────────────────────
+loadAll();
+setInterval(loadAll, 15000);
+</script>
+</body>
+</html>
