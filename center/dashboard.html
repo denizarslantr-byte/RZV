@@ -441,15 +441,32 @@ function renderReservations() {
 // ── Rezervasyon İşlemleri ──────────────────────────────────────
 async function updateGirdi(id, checked) {
   await apiPost("updateReservationOps", { id, girdi:checked?"TRUE":"", status:checked?"IN_STORE":"PENDING" });
-  await loadAll();
+  // Sadece lokal state güncelle, tablo yeniden çekilmesin
+  const r = reservations.find(x => String(x.id) === String(id));
+  if (r) {
+    r.girdi  = checked ? "TRUE" : "";
+    r.status = checked ? "IN_STORE" : "PENDING";
+  }
+  renderReservations();
+  renderSummary();
+  renderStaffPanel();
 }
 
 async function updateCikti(id, checked) {
   const csaat = document.getElementById("csaat_"+id)?.value || "";
-  const now = checked ? (csaat || new Date().toTimeString().slice(0,5)) : "";
+  const now   = checked ? (csaat || new Date().toTimeString().slice(0,5)) : "";
   if (checked && document.getElementById("csaat_"+id)) document.getElementById("csaat_"+id).value = now;
   await apiPost("updateReservationOps", { id, cikti:checked?"TRUE":"", ciktiSaati:now, status:checked?"EXITED":"IN_STORE" });
-  await loadAll();
+  // Sadece lokal state güncelle
+  const r = reservations.find(x => String(x.id) === String(id));
+  if (r) {
+    r.cikti      = checked ? "TRUE" : "";
+    r.ciktiSaati = now;
+    r.status     = checked ? "EXITED" : "IN_STORE";
+  }
+  renderReservations();
+  renderSummary();
+  renderStaffPanel();
 }
 
 async function saveOps(id) {
@@ -694,42 +711,42 @@ function exportXLS() {
   const acentaMap = {};
   hotels.forEach(h => { acentaMap[h.hotel] = h.acentaCode||""; });
 
-  // Başlık satırı
+  // REZ_RAPOR.xls ile aynı sütun sırası
   const headers = [
-    "ACENTAKOD","ACENTAADI","TARIH","GIRIS","CIKIS","PAX","PAXCOCUK","UYRUK","NOT",
-    "DURUM","KARTNO","AYAK","SERVISCIADI","SERVISCIADI2","SERVISCIADI3","SERVISCIADI4",
-    "GRUPBASKANADI","SUBEKOD","SUBEADI","SATIS"
+    "ACENTAKOD","TARIH","ACENTAADI","GRUPBASKANADI",
+    "KARTNO","UYRUK",
+    "SERVISCIADI","SERVISCIADI2","SERVISCIADI3","SERVISCIADI4",
+    "PAX","PAXCOCUK","GIRIS","CIKIS","AYAK",
+    "SUBEKOD","SUBEADI"
   ];
 
   const rows = reservations.map(r => [
     acentaMap[r.hotel] || "",          // ACENTAKOD
+    fmtDateDot(r.date),                // TARIH (GG.AA.YYYY)
     r.hotel,                           // ACENTAADI
-    fmtDate(r.date),                   // TARIH (GG/AA/YYYY)
-    r.time,                            // GIRIS
-    r.ciktiSaati || "",                // CIKIS
-    Number(r.adult)||0,                // PAX
-    Number(r.child)||0,                // PAXCOCUK
-    r.nation,                          // UYRUK
-    r.notes||"",                       // NOT
-    statusLabel(r.status),             // DURUM
+    "PIANO REHBER",                    // GRUPBASKANADI
     r.kart||"",                        // KARTNO
-    r.ayak ? "1 AYAK" : "",           // AYAK
+    r.nation,                          // UYRUK
     r.staff1||"",                      // SERVISCIADI
     r.staff2||"",                      // SERVISCIADI2
     r.staff3||"",                      // SERVISCIADI3
     r.staff4||"",                      // SERVISCIADI4
-    "PIANO REHBER",                    // GRUPBASKANADI
+    Number(r.adult)||0,                // PAX
+    Number(r.child)||0,                // PAXCOCUK
+    r.time,                            // GIRIS
+    r.ciktiSaati || "",                // CIKIS
+    r.ayak ? "1.AYAK" : "",            // AYAK
     "1",                               // SUBEKOD
-    "MERKEZ",                          // SUBEADI
-    String(r.satis).toUpperCase()==="TRUE" ? "EVET" : ""  // SATIS
+    "MERKEZ"                           // SUBEADI
   ]);
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  ws["!cols"] = [10,22,12,8,8,6,8,12,20,14,12,10,16,16,16,16,14,8,10,8].map(w=>({wch:w}));
+  ws["!cols"] = [20,14,24,14,10,12,16,16,16,16,6,8,8,8,10,8,10].map(w=>({wch:w}));
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "sayfa1");
-  XLSX.writeFile(wb, `piano-deri-${fmtDate(datePicker.value).replace(/\//g,"-")}.xls`, { bookType:"xls" });
+  const tarih = fmtDateDot(datePicker.value).replace(/\./g,"-");
+  XLSX.writeFile(wb, `piano-deri-${tarih}.xls`, { bookType:"xls" });
   showToast(`✅ Excel indirildi (${reservations.length} kayıt)`);
 }
 
