@@ -49,6 +49,15 @@ function fmtDate(iso) {
   return p[2] + "/" + p[1] + "/" + p[0];
 }
 
+// Excel export için GG.AA.YYYY
+function fmtDateDot(iso) {
+  if (!iso) return "";
+  const s = String(iso).slice(0, 10);
+  const p = s.split("-");
+  if (p.length !== 3) return s;
+  return p[2] + "." + p[1] + "." + p[0];
+}
+
 // GG/AA/YYYY → YYYY-MM-DD (input[type=date] için)
 function unFmtDate(display) {
   if (!display) return "";
