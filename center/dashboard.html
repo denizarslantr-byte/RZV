@@ -752,7 +752,35 @@ function exportXLS() {
 
 // ── Bootstrap ──────────────────────────────────────────────────
 loadAll();
-setInterval(loadAll, 15000);
+
+// Otomatik yenileme: kullanıcı input'a dokunuyorsa DURDUR
+let userActive = false;
+let autoRefreshTimer = null;
+
+function resetActivity() {
+  userActive = true;
+  clearTimeout(autoRefreshTimer);
+  // Kullanıcı 8 saniye işlem yapmazsa yenile
+  autoRefreshTimer = setTimeout(() => {
+    userActive = false;
+    loadAll();
+  }, 8000);
+}
+
+// Input ve select değişimlerini izle
+document.addEventListener('change', resetActivity);
+document.addEventListener('input',  resetActivity);
+document.addEventListener('click',  e => {
+  // Sadece butonlara tıklamada aktiflik say
+  if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+    resetActivity();
+  }
+});
+
+// Normal otomatik yenileme: kullanıcı aktif değilse 15 saniyede bir
+setInterval(() => {
+  if (!userActive) loadAll();
+}, 15000);
 </script>
 </body>
 </html>
