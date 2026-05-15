@@ -32,9 +32,9 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = e.request.url;
 
-  // Google Apps Script API — her zaman ağdan
-  if (url.includes('script.google.com')) {
-    e.respondWith(fetch(e.request));
+  // Google Apps Script API — her zaman ağdan, cache yok
+  if (url.includes('script.google.com') || url.includes('workers.dev')) {
+    e.respondWith(fetch(e.request).catch(() => new Response('', {status:503})));
     return;
   }
 
