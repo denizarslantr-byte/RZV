@@ -501,7 +501,8 @@ function renderReservations() {
           ${grouped[t].map(r => {
             const dis = r.status==="CANCELLED" ? "disabled" : "";
             const isSatis = String(r.satis).toUpperCase()==="TRUE";
-            return `<tr class="${rowClass(r)}">
+            const isNew = blinkIds.has(String(r.id));
+            return `<tr class="${rowClass(r)}${isNew?' row-new-blink':''}">
               <td><input type="checkbox" ${String(r.girdi).toUpperCase()==="TRUE"?"checked":""} onchange="updateGirdi('${r.id}',this.checked)" ${dis}></td>
               <td><input type="checkbox" ${String(r.cikti).toUpperCase()==="TRUE"?"checked":""} onchange="updateCikti('${r.id}',this.checked)" ${dis}></td>
               <td><input type="time" class="ti" id="csaat_${r.id}" value="${r.ciktiSaati||''}" ${dis}></td>
@@ -880,6 +881,7 @@ function exportXLS(mode = "all") {
 
 // ── Yeni Rezervasyon Bildirim Sistemi ──────────────────────────
 let knownIds   = new Set();
+let blinkIds   = new Set();
 let firstLoad  = true;
 let notifCtx   = null;
 
@@ -924,23 +926,11 @@ function checkNewReservations(list) {
   // Ses çal
   playNotifSound();
 
-  // Satırları 6 saniye yanıp söndür
-  setTimeout(() => {
-    newOnes.forEach(r => {
-      // ID'yi data attribute ile bul
-      const allTds = document.querySelectorAll("td");
-      allTds.forEach(td => {
-        if (td.closest("tr") && td.textContent.trim() === String(r.time)) {
-          const row = td.closest("tr");
-          if (row && row.textContent.includes(r.hotel.slice(0,5))) {
-            row.classList.remove("row-new-blink");
-            void row.offsetWidth;
-            row.classList.add("row-new-blink");
-          }
-        }
-      });
-    });
-  }, 600);
+  // Yeni ID'leri blink listesine ekle — renderReservations halleder
+  newOnes.forEach(r => blinkIds.add(String(r.id)));
+
+  // 7 saniye sonra blink listesini temizle
+  setTimeout(() => { blinkIds.clear(); }, 7000);
 
   setTimeout(closeNotif, 5000);
 }
