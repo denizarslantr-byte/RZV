@@ -243,6 +243,7 @@ function renderList(list) {
         <div class="res-actions">
           ${canEdit   ? `<button class="btn-blue btn-sm" onclick='editRes(${JSON.stringify(r).replace(/'/g,"&#39;")})'>✏️ Düzelt</button>` : ""}
           ${canCancel ? `<button class="btn-red  btn-sm" onclick="cancelRes('${r.id}')">❌ İptal</button>` : ""}
+          ${canCancel ? `<button class="btn-red  btn-sm" onclick="deleteRes('${r.id}')">🗑 Sil</button>` : ""}
         </div>
       </div>`;
   }).join("");

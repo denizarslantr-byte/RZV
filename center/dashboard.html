@@ -12,8 +12,13 @@
   #newResNotif .nr-list{font-size:12px;color:#86efac;line-height:1.8}
   #newResNotif .nr-close{position:absolute;top:8px;right:10px;color:#86efac;font-size:14px;cursor:pointer;opacity:.7}
   #newResNotif .nr-close:hover{opacity:1}
-  @keyframes blink-row{0%,100%{opacity:1}50%{opacity:0.1}}
-  .row-new-blink{animation:blink-row 0.5s ease-in-out 12}
+  @keyframes blink-row{
+    0%,100%{background:rgba(34,197,94,.45)!important;box-shadow:inset 0 0 14px rgba(34,197,94,.55)}
+    50%{background:rgba(20,83,45,.15)!important;box-shadow:inset 0 0 4px rgba(34,197,94,.25)}
+  }
+  .row-new-blink > td{animation:blink-row 0.65s ease-in-out infinite!important}
+  @keyframes blink-notif-green{0%,100%{filter:brightness(1);box-shadow:0 0 18px rgba(34,197,94,.55)}50%{filter:brightness(1.35);box-shadow:0 0 36px rgba(34,197,94,.95)}}
+  #newResNotif.blinking{animation:blink-notif-green .8s ease-in-out infinite}
   </style>
 </head>
 <body>
@@ -59,6 +64,8 @@
       <button id="mnHome"   class="btn-dark active-menu" onclick="showSection('homeSection','mnHome')">🏠 Ana Ekran</button>
       <button id="mnManual" class="btn-dark" onclick="showSection('manualSection','mnManual')">✏️ Elle Rezervasyon</button>
       <button id="mnRapor"  class="btn-dark" onclick="showSection('raporSection','mnRapor');loadRapor()">📊 Raporlar</button>
+      <button id="mnBolge"  class="btn-dark" onclick="location.href='../region/index.html'">📋 Bölgeci Liste</button>
+      <button id="mnPatron" class="btn-dark" onclick="location.href='../boss/index.html'">👔 Patron Sayfası</button>
       <button id="mnStaff"  class="btn-dark" onclick="showSection('staffSection','mnStaff')">👥 Personeller</button>
       <button id="mnOff"    class="btn-dark" onclick="showSection('offSection','mnOff')">🏖 İzin Girişi</button>
       <button id="mnPlaka"  class="btn-dark" onclick="showSection('plakaSection','mnPlaka')">🚗 Araçlar</button>
@@ -502,7 +509,7 @@ function renderReservations() {
             const dis = r.status==="CANCELLED" ? "disabled" : "";
             const isSatis = String(r.satis).toUpperCase()==="TRUE";
             const isNew = blinkIds.has(String(r.id));
-            return `<tr class="${rowClass(r)}${isNew?' row-new-blink':''}">
+            return `<tr data-rid="${r.id}" class="${rowClass(r)}${isNew?' row-new-blink':''}">
               <td><input type="checkbox" ${String(r.girdi).toUpperCase()==="TRUE"?"checked":""} onchange="updateGirdi('${r.id}',this.checked)" ${dis}></td>
               <td><input type="checkbox" ${String(r.cikti).toUpperCase()==="TRUE"?"checked":""} onchange="updateCikti('${r.id}',this.checked)" ${dis}></td>
               <td><input type="time" class="ti" id="csaat_${r.id}" value="${r.ciktiSaati||''}" ${dis}></td>
@@ -514,7 +521,7 @@ function renderReservations() {
               <td>${r.child}</td>
               <td>${r.nation}</td>
               <td style="max-width:80px;overflow:hidden;text-overflow:ellipsis">${r.notes||""}</td>
-              <td>${badge(r)}</td>
+              <td class="status-cell">${badge(r)}</td>
               <td><input class="ci" id="kart_${r.id}" value="${r.kart||''}" ${dis}></td>
               <td><select class="si" id="plaka_${r.id}" ${dis}>${plakaOpts(r.ayak)}</select></td>
               <td><select class="si" id="s1_${r.id}" ${dis}>${staffOpts(r.staff1)}</select></td>
@@ -534,34 +541,39 @@ function renderReservations() {
 }
 
 // ── Rezervasyon İşlemleri ──────────────────────────────────────
+function refreshOneRow(id){
+  const r = reservations.find(x => String(x.id) === String(id));
+  const row = document.querySelector(`tr[data-rid="${id}"]`);
+  if (!r || !row) return;
+  row.className = rowClass(r) + (blinkIds.has(String(id)) ? ' row-new-blink' : '');
+  const badgeCell = row.querySelector('.status-cell');
+  if (badgeCell) badgeCell.innerHTML = badge(r);
+}
+
 async function updateGirdi(id, checked) {
-  await apiPost("updateReservationOps", { id, girdi:checked?"TRUE":"", status:checked?"IN_STORE":"PENDING" });
-  // Sadece lokal state güncelle, tablo yeniden çekilmesin
   const r = reservations.find(x => String(x.id) === String(id));
   if (r) {
     r.girdi  = checked ? "TRUE" : "";
     r.status = checked ? "IN_STORE" : "PENDING";
+    refreshOneRow(id); renderSummary(); renderStaffPanel();
   }
-  renderReservations();
-  renderSummary();
-  renderStaffPanel();
+  const res = await apiPost("updateReservationOps", { id, girdi:checked?"TRUE":"", status:checked?"IN_STORE":"PENDING" });
+  if (!res.success) showToast("Giriş kaydı başarısız", "err");
 }
 
 async function updateCikti(id, checked) {
   const csaat = document.getElementById("csaat_"+id)?.value || "";
   const now   = checked ? (csaat || new Date().toTimeString().slice(0,5)) : "";
   if (checked && document.getElementById("csaat_"+id)) document.getElementById("csaat_"+id).value = now;
-  await apiPost("updateReservationOps", { id, cikti:checked?"TRUE":"", ciktiSaati:now, status:checked?"EXITED":"IN_STORE" });
-  // Sadece lokal state güncelle
   const r = reservations.find(x => String(x.id) === String(id));
   if (r) {
     r.cikti      = checked ? "TRUE" : "";
     r.ciktiSaati = now;
-    r.status     = checked ? "EXITED" : "IN_STORE";
+    r.status     = checked ? "EXITED" : (String(r.girdi).toUpperCase()==="TRUE" ? "IN_STORE" : "PENDING");
+    refreshOneRow(id); renderSummary(); renderStaffPanel();
   }
-  renderReservations();
-  renderSummary();
-  renderStaffPanel();
+  const res = await apiPost("updateReservationOps", { id, cikti:checked?"TRUE":"", ciktiSaati:now, status:checked?"EXITED":"IN_STORE" });
+  if (!res.success) showToast("Çıkış kaydı başarısız", "err");
 }
 
 async function saveOps(id) {
@@ -595,7 +607,7 @@ function editCenter(r) {
   centerNation.value= r.nation||"RUS";
   centerNotes.value = r.notes||"";
   centerKart.value  = r.kart||"";
-  centerAyak.value  = r.ayak||"";
+  centerPlaka.value  = r.ayak||"";
   showSection("manualSection","mnManual");
 }
 
@@ -603,7 +615,7 @@ function clearManualForm() {
   editResId.value=""; manualTitle.innerText="✏️ Elle Rezervasyon";
   centerHotel.value=""; centerDate.value=today; centerTime.value="10:30";
   centerAdult.value=2; centerChild.value=0;
-  centerNation.value="RUS"; centerNotes.value=""; centerKart.value=""; centerAyak.value="";
+  centerNation.value="RUS"; centerNotes.value=""; centerKart.value=""; centerPlaka.value="";
 }
 
 async function saveCenterReservation() {
@@ -613,7 +625,7 @@ async function saveCenterReservation() {
     date:centerDate.value, time:centerTime.value, hotel:centerHotel.value,
     adult:centerAdult.value, child:centerChild.value,
     nation:centerNation.value, notes:centerNotes.value,
-    kart:centerKart.value, ayak:centerAyak.value,
+    kart:centerKart.value, ayak:centerPlaka.value,
     status:editResId.value?"UPDATED":"PENDING"
   };
   if (editResId.value) body.id = editResId.value;
@@ -921,26 +933,43 @@ function checkNewReservations(list) {
   document.getElementById("nrList").innerHTML = newOnes.map(r =>
     `🏨 <b>${r.hotel}</b> — ${r.time} — ${(Number(r.adult)||0)+(Number(r.child)||0)} kişi`
   ).join("<br>");
-  document.getElementById("newResNotif").style.display = "block";
+  const notif = document.getElementById("newResNotif");
+  notif.style.display = "block";
+  notif.classList.add("blinking");
+  notif.dataset.readyClose = "0";
+  setTimeout(()=>{ notif.dataset.readyClose = "1"; }, 10000);
 
   // Ses çal
   playNotifSound();
 
-  // Yeni ID'leri blink listesine ekle — renderReservations halleder
+  // Yeni ID'leri blink listesine ekle — fareyle/tıklamayla kapatılana kadar yeşil yanıp söner
   newOnes.forEach(r => blinkIds.add(String(r.id)));
-
-  // 7 saniye sonra blink listesini temizle
-  setTimeout(() => { blinkIds.clear(); }, 7000);
-
-  setTimeout(closeNotif, 5000);
 }
 
-function closeNotif() {
-  document.getElementById("newResNotif").style.display = "none";
+function closeNotif(force=false) {
+  const notif = document.getElementById("newResNotif");
+  if (!force && notif.dataset.readyClose !== "1") {
+    showToast("Bildirim en az 10 saniye ekranda kalır");
+    return;
+  }
+  notif.style.display = "none";
+  notif.classList.remove("blinking");
+  blinkIds.clear();
+  renderReservations();
 }
+
+function stopBlinkOnUserClick(){
+  const notif = document.getElementById("newResNotif");
+  notif.dataset.readyClose = "1";
+  closeNotif(true);
+}
+
+document.addEventListener("click", (ev)=>{
+  if (blinkIds.size && !ev.target.closest("#newResNotif")) stopBlinkOnUserClick();
+});
 
 function goToNewRes() {
-  closeNotif();
+  stopBlinkOnUserClick();
   showSection("homeSection","mnHome");
   setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior:"smooth" }), 200);
 }
