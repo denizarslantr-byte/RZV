@@ -5,208 +5,147 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>Piano Deri — Bölgeci</title>
   <style>
-    :root{--gold:#d8aa4b;--gold2:#f1d48a;--bg:#080808;--bg2:rgba(18,19,24,.98);--bg3:rgba(28,29,38,.95);--text:#f0f0f0;--text2:#9a9a9a;--b:rgba(216,170,75,.3);--b2:rgba(255,255,255,.08)}
-    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-    html,body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:14px;min-height:100vh}
-    .hdr{background:var(--bg2);border-bottom:1px solid var(--b);padding:12px 14px;position:sticky;top:0;z-index:100;backdrop-filter:blur(14px)}
-    .hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-    .brand{display:flex;align-items:center;gap:8px}
-    .brand .p{font-family:Georgia,serif;color:var(--gold2);font-size:26px;line-height:1}
-    .brand .n{font-family:Georgia,serif;color:var(--text);font-size:12px;letter-spacing:2px}
-    .brand .s{color:var(--gold);font-size:9px;letter-spacing:2px}
-    .rbtn{background:rgba(216,170,75,.12);border:1px solid var(--b);color:var(--gold2);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer}
-    .rbtn.spin{animation:spin .6s linear infinite}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0a0a14;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#f0f0f0;font-size:13px}
+    .brand{text-align:center;padding:16px 14px 10px}
+    .brand .p{font-family:Georgia,serif;color:#f1d48a;font-size:38px;line-height:.7}
+    .brand .n{font-family:Georgia,serif;letter-spacing:5px;font-size:20px;margin-top:4px}
+    .brand .s{color:#d8aa4b;letter-spacing:4px;font-size:9px;margin-top:3px}
+    .topbar{display:flex;align-items:center;gap:8px;padding:9px 14px;background:rgba(18,19,24,.95);border-top:1px solid rgba(216,170,75,.15);border-bottom:1px solid rgba(216,170,75,.15)}
+    .tbtn{background:rgba(30,31,40,.9);border:1px solid rgba(255,255,255,.1);color:#aaa;border-radius:6px;padding:6px 11px;font-size:11px;cursor:pointer}
+    .tbtn.gold{background:rgba(216,170,75,.15);border-color:rgba(216,170,75,.4);color:#f1d48a;font-weight:700}
+    .tbtn:active{opacity:.7}
+    .date-lbl{flex:1;text-align:center;font-size:13px;font-weight:700;color:#f1d48a}
+    .refresh{background:rgba(216,170,75,.12);border:1px solid rgba(216,170,75,.3);color:#f1d48a;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer}
+    .refresh.spin{animation:spin .6s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
-    .dnav{display:flex;align-items:center;gap:7px}
-    .darr{background:rgba(255,255,255,.06);border:1px solid var(--b2);color:var(--text2);border-radius:7px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;flex-shrink:0}
-    .darr:active{background:rgba(255,255,255,.14)}
-    .dlbl{flex:1;text-align:center;cursor:pointer}
-    .dlbl .date{font-size:14px;font-weight:700;color:var(--gold2)}
-    .dlbl .day{font-size:10px;color:var(--text2);margin-top:1px}
-    .tbtn{background:rgba(216,170,75,.1);border:1px solid rgba(216,170,75,.3);color:var(--gold);border-radius:7px;padding:0 10px;height:34px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
-    #hd{position:absolute;opacity:0;width:0;height:0}
-
-    .sum{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding:10px 12px;background:#0d0d1a;border-bottom:1px solid var(--b2)}
-    .sc{background:var(--bg3);border:1px solid var(--b2);border-radius:11px;padding:9px 5px;text-align:center}
-    .sv{font-size:22px;font-weight:900;line-height:1.1;margin-bottom:2px}
-    .sl{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
-    .c0{color:var(--gold2)}.c1{color:#d1d5db}.c2{color:#fde68a}.c3{color:#bbf7d0}
-
-    .content{padding:10px 12px 80px}
-
+    #hdInput{position:absolute;opacity:0;width:0;height:0}
+    .summary{font-size:11px;color:#666;padding:6px 14px;background:rgba(10,10,20,.8);border-bottom:1px solid rgba(255,255,255,.05)}
+    .content{padding:10px 12px 60px}
     /* Otel kartı */
-    .hotel-card{background:var(--bg3);border:1px solid var(--b2);border-radius:13px;overflow:hidden;margin-bottom:10px}
-
-    /* Otel başlığı: isim + durum rozetleri */
-    .hotel-hdr{background:rgba(0,0,0,.35);padding:9px 12px;border-bottom:1px solid var(--b2);display:flex;align-items:center;gap:8px}
-    .hotel-icon{font-size:14px;flex-shrink:0}
-    .hotel-name{font-size:12px;font-weight:700;color:var(--gold2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-    /* Durum rozetleri otel adı yanında */
-    .hotel-badges{display:flex;gap:4px;flex-shrink:0}
-    .hb{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;border:1.5px solid}
-    .hb-i{background:rgba(234,179,8,.25);border-color:rgba(234,179,8,.7);color:#fde68a}   /* İçeride - sarı */
-    .hb-c{background:rgba(34,197,94,.25);border-color:rgba(34,197,94,.7);color:#4ade80}   /* Çıktı - yeşil */
-    .hb-s{background:rgba(56,189,248,.25);border-color:rgba(56,189,248,.7);color:#7dd3fc}  /* Satış - mavi */
-
+    .hcard{background:rgba(20,21,30,.95);border:1px solid rgba(255,255,255,.07);border-radius:12px;margin-bottom:8px;overflow:hidden}
+    .hhdr{padding:9px 12px;display:flex;align-items:center;gap:7px;border-bottom:1px solid rgba(255,255,255,.05)}
+    .hname{font-size:12px;font-weight:700;color:#f1d48a;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* Başlık rozetleri */
+    .hbs{display:flex;gap:3px}
+    .hb{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;border:1.5px solid}
+    .hbi{background:rgba(234,179,8,.2);border-color:rgba(234,179,8,.6);color:#fde68a}
+    .hbc{background:rgba(34,197,94,.2);border-color:rgba(34,197,94,.6);color:#4ade80}
+    .hbs2{background:rgba(56,189,248,.2);border-color:rgba(56,189,248,.6);color:#7dd3fc}
     /* Rezervasyon satırı */
-    .res-row{display:flex;align-items:stretch;border-bottom:1px solid rgba(255,255,255,.04);min-height:42px}
-    .res-row:last-child{border-bottom:0}
-
-    /* Durum kutusu - tam boy */
-    .res-status{width:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;border-right:1px solid rgba(255,255,255,.06)}
-    .rs-pending {background:rgba(31,41,55,.5);color:var(--text2)}
-    .rs-inside  {background:rgba(234,179,8,.2);color:#fde68a}
-    .rs-done    {background:rgba(34,197,94,.18);color:#4ade80}
-    .rs-cancelled{background:rgba(239,68,68,.12);color:#f87171}
-
-    /* Satış kutusu - tam boy */
-    .res-satis{width:30px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;border-right:1px solid rgba(255,255,255,.06)}
-    .rs-satis-on {background:rgba(56,189,248,.2);color:#7dd3fc}
-    .rs-satis-off{background:transparent;color:transparent}
-
-    .res-info{flex:1;padding:8px 10px;display:flex;align-items:center;gap:10px}
-    .res-time{font-size:14px;font-weight:900;color:var(--gold2);min-width:40px}
-    .res-detail{flex:1}
-    .res-pax{font-size:12px;color:var(--text);font-weight:600}
-    .res-nat{font-size:10px;color:var(--text2);margin-top:1px}
-
-    .loading{display:flex;align-items:center;justify-content:center;padding:50px 20px;flex-direction:column;gap:12px;color:var(--text2)}
-    .spinner{width:26px;height:26px;border:2px solid var(--b2);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite}
-    .footer{text-align:center;font-size:10px;color:var(--text2);padding:6px;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--b2)}
+    .rrow{display:flex;align-items:stretch;border-bottom:1px solid rgba(255,255,255,.04);min-height:42px}
+    .rrow:last-child{border-bottom:0}
+    /* Sol durum kutusu - tam yükseklik */
+    .rst{width:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;border-right:1px solid rgba(255,255,255,.06)}
+    .rp{background:rgba(30,41,55,.4);color:#4b5563}
+    .ri{background:rgba(234,179,8,.2);color:#fde68a}
+    .rc{background:rgba(34,197,94,.18);color:#4ade80}
+    .rx{background:rgba(239,68,68,.1);color:#f87171}
+    /* Satış kutusu */
+    .rsal{width:26px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;border-right:1px solid rgba(255,255,255,.06)}
+    .rson{background:rgba(56,189,248,.18);color:#7dd3fc}
+    /* İçerik */
+    .rbody{flex:1;padding:7px 10px;display:flex;align-items:center;gap:8px}
+    .rtime{font-size:14px;font-weight:900;color:#f1d48a;min-width:38px}
+    .rdet .rpax{font-size:12px;color:#f0f0f0;font-weight:600}
+    .rdet .rnat{font-size:10px;color:#777;margin-top:1px}
+    .nodata{padding:14px;text-align:center;color:#444;font-size:11px}
+    .load{text-align:center;padding:40px;color:#555}
+    .spin2{width:22px;height:22px;border:2px solid rgba(255,255,255,.08);border-top-color:#d8aa4b;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px}
+    .foot{text-align:center;font-size:10px;color:#444;padding:7px;position:fixed;bottom:0;left:0;right:0;background:rgba(8,8,16,.95);border-top:1px solid rgba(255,255,255,.06)}
   </style>
 </head>
 <body>
-<div class="hdr">
-  <div class="hdr-top">
-    <div class="brand"><div class="p">P</div><div><div class="n">PIANO DERİ</div><div class="s">BÖLGECİ PANELİ</div></div></div>
-    <div class="rbtn" id="rbtn" onclick="refresh()">↺</div>
-  </div>
-  <div class="dnav">
-    <div class="darr" onclick="changeDay(-1)">‹</div>
-    <div class="dlbl" onclick="openPicker()"><div class="date" id="dlbl"></div><div class="day" id="dwlbl"></div></div>
-    <div class="darr" onclick="changeDay(1)">›</div>
-    <div class="tbtn" onclick="goToday()">Bugün</div>
-  </div>
-  <input type="date" id="hd" onchange="onPick()">
+<div class="brand">
+  <div class="p">P</div>
+  <div class="n">PIANO DERİ</div>
+  <div class="s">SUBBölgeci</div>
 </div>
-
-<div class="sum">
-  <div class="sc"><div class="sv c0" id="sv-total">—</div><div class="sl">Toplam</div></div>
-  <div class="sc"><div class="sv c1" id="sv-pending">—</div><div class="sl">Bekleyen</div></div>
-  <div class="sc"><div class="sv c2" id="sv-inside">—</div><div class="sl">İçeride</div></div>
-  <div class="sc"><div class="sv c3" id="sv-done">—</div><div class="sl">Tamamlandı</div></div>
+<div class="topbar">
+  <div class="tbtn" onclick="changeDay(-1)">◀</div>
+  <div class="date-lbl" id="dateLbl" onclick="document.getElementById('hdInput').click()"></div>
+  <div class="tbtn" onclick="changeDay(1)">▶</div>
+  <div class="tbtn gold" onclick="goToday()">Bugün</div>
+  <div class="refresh" id="rbtn" onclick="refresh()">↺</div>
 </div>
-
-<div class="content" id="content">
-  <div class="loading"><div class="spinner"></div>Yükleniyor...</div>
-</div>
-<div class="footer" id="footer"></div>
+<input type="date" id="hdInput" onchange="onDatePick()">
+<div class="summary" id="summary"></div>
+<div class="content" id="content"><div class="load"><div class="spin2"></div>Yükleniyor...</div></div>
+<div class="foot" id="foot"></div>
 
 <script src="../config/config.js"></script>
 <script src="../assets/common.js"></script>
 <script>
-const DAYS=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
-let curDate=todayStr(), all=[];
+const DAYS=["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
+let curDate=todayStr(),all=[];
 
-function fmt(iso){if(!iso)return'';const p=iso.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
-function updateHdr(){const d=new Date(curDate+'T00:00:00');dlbl.innerText=fmt(curDate);dwlbl.innerText=DAYS[d.getDay()];hd.value=curDate;}
-function changeDay(n){curDate=addDays(curDate,n);updateHdr();load();}
-function goToday(){curDate=todayStr();updateHdr();load();}
-function openPicker(){hd.click();}
-function onPick(){if(hd.value){curDate=hd.value;updateHdr();load();}}
+function fmt(iso){if(!iso)return"";const p=iso.split("-");return p[2]+"/"+p[1]+"/"+p[0];}
+function updHdr(){const d=new Date(curDate+"T00:00:00");document.getElementById("dateLbl").innerText=fmt(curDate)+" — "+DAYS[d.getDay()];hdInput.value=curDate;}
+function changeDay(n){curDate=addDays(curDate,n);updHdr();load();}
+function goToday(){curDate=todayStr();updHdr();load();}
+function onDatePick(){if(hdInput.value){curDate=hdInput.value;updHdr();load();}}
 
-function status(r){
-  if(r.status==='CANCELLED') return 'cancelled';
-  if(String(r.cikti).toUpperCase()==='TRUE') return 'done';
-  if(String(r.girdi).toUpperCase()==='TRUE') return 'inside';
-  return 'pending';
-}
-
-function updateStats(){
-  sv_total.innerText   = all.length;
-  sv_pending.innerText = all.filter(r=>status(r)==='pending').length;
-  sv_inside.innerText  = all.filter(r=>status(r)==='inside').length;
-  sv_done.innerText    = all.filter(r=>status(r)==='done').length;
+function st(r){
+  if(r.status==="CANCELLED")return"x";
+  if(String(r.cikti).toUpperCase()==="TRUE")return"c";
+  if(String(r.girdi).toUpperCase()==="TRUE")return"i";
+  return"p";
 }
 
 function render(){
-  const el=document.getElementById('content');
-  if(!all.length){
-    el.innerHTML='<div class="loading" style="padding:40px"><div style="font-size:32px;margin-bottom:10px">📭</div>Bu tarihte rezervasyon yok.</div>';
-    return;
-  }
-
-  // Sadece o gün rezervasyonu olan oteller
-  const byHotel={};
-  all.forEach(r=>{
-    if(!byHotel[r.hotel])byHotel[r.hotel]=[];
-    byHotel[r.hotel].push(r);
-  });
-  const hotels=Object.keys(byHotel).sort();
-
-  el.innerHTML = hotels.map(hotel=>{
-    const resv=byHotel[hotel].sort((a,b)=>String(a.time).localeCompare(String(b.time)));
-
-    // Otel başlığı rozetleri
-    const hasInside  = resv.some(r=>status(r)==='inside');
-    const hasDone    = resv.some(r=>status(r)==='done');
-    const hasSatis   = resv.some(r=>String(r.satis).toUpperCase()==='TRUE'&&status(r)==='done');
-
-    const badges = `
-      ${hasInside ? '<div class="hb hb-i" title="İçeride">İ</div>' : ''}
-      ${hasDone   ? '<div class="hb hb-c" title="Çıktı">Ç</div>'   : ''}
-      ${hasSatis  ? '<div class="hb hb-s" title="Satış">S</div>'   : ''}
-    `;
-
-    const rows = resv.map(r=>{
-      const st=status(r);
-      const pax=(Number(r.adult)||0)+(Number(r.child)||0);
-      const isSatis=String(r.satis).toUpperCase()==='TRUE'&&st==='done';
-
-      const stLabel = {pending:'',inside:'İ',done:'Ç',cancelled:'✕'}[st]||'';
-      const stClass = {pending:'rs-pending',inside:'rs-inside',done:'rs-done',cancelled:'rs-cancelled'}[st];
-
-      return `<div class="res-row">
-        <div class="res-status ${stClass}">${stLabel}</div>
-        <div class="res-satis ${isSatis?'rs-satis-on':'rs-satis-off'}">S</div>
-        <div class="res-info">
-          <div class="res-time">${r.time}</div>
-          <div class="res-detail">
-            <div class="res-pax">${pax} kişi</div>
-            <div class="res-nat">${r.nation||'—'}</div>
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-
-    return `<div class="hotel-card">
-      <div class="hotel-hdr">
-        <span class="hotel-icon">🏨</span>
-        <span class="hotel-name">${hotel}</span>
-        <div class="hotel-badges">${badges}</div>
-      </div>
-      ${rows}
-    </div>`;
-  }).join('');
+  const el=document.getElementById("content");
+  const byH={};
+  all.forEach(r=>{if(!byH[r.hotel])byH[r.hotel]=[];byH[r.hotel].push(r);});
+  const total=all.length,pax=all.reduce((s,r)=>s+(Number(r.adult)||0)+(Number(r.child)||0),0);
+  document.getElementById("summary").innerText=fmt(curDate)+" · "+total+" rezervasyon · "+pax+" pax";
+  if(!total){el.innerHTML='<div class="load" style="padding:40px"><div style="font-size:28px;margin-bottom:8px">📭</div>Bu tarihte rezervasyon yok.</div>';return;}
+  const hotels=Object.keys(byH).sort();
+  el.innerHTML=hotels.map(hotel=>{
+    const rv=byH[hotel].sort((a,b)=>String(a.time).localeCompare(String(b.time)));
+    const hasI=rv.some(r=>st(r)==="i"),hasC=rv.some(r=>st(r)==="c");
+    const hasS=rv.some(r=>String(r.satis).toUpperCase()==="TRUE"&&st(r)==="c");
+    return '<div class="hcard">'+
+      '<div class="hhdr">'+
+        '<span style="font-size:13px">🏨</span>'+
+        '<span class="hname">'+hotel+'</span>'+
+        '<div class="hbs">'+
+          (hasI?'<div class="hb hbi">İ</div>':"")+
+          (hasC?'<div class="hb hbc">Ç</div>':"")+
+          (hasS?'<div class="hb hbs2">S</div>':"")+
+        '</div>'+
+      '</div>'+
+      rv.map(r=>{
+        const s=st(r),pax=(Number(r.adult)||0)+(Number(r.child)||0);
+        const isSatis=String(r.satis).toUpperCase()==="TRUE"&&s==="c";
+        const lbl={p:"",i:"İ",c:"Ç",x:"✕"}[s];
+        const cls={p:"rp",i:"ri",c:"rc",x:"rx"}[s];
+        return '<div class="rrow">'+
+          '<div class="rst '+cls+'">'+lbl+'</div>'+
+          '<div class="rsal '+( isSatis?"rson":"")+'">'+( isSatis?"S":"")+'</div>'+
+          '<div class="rbody">'+
+            '<div class="rtime">'+r.time+'</div>'+
+            '<div class="rdet">'+
+              '<div class="rpax">'+pax+' kişi</div>'+
+              '<div class="rnat">'+( r.nation||"—")+'</div>'+
+            '</div>'+
+          '</div>'+
+        '</div>';
+      }).join("")+
+    '</div>';
+  }).join("");
 }
 
 async function load(){
-  document.getElementById('content').innerHTML='<div class="loading"><div class="spinner"></div>Yükleniyor...</div>';
+  document.getElementById("content").innerHTML='<div class="load"><div class="spin2"></div>Yükleniyor...</div>';
   try{
-    const data=await apiGet('getReservations',{date:curDate});
+    const data=await apiGet("getReservations",{date:curDate});
     all=Array.isArray(data)?data:[];
-    updateStats();
     render();
-    footer.innerText='Son güncelleme: '+new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  }catch(e){
-    document.getElementById('content').innerHTML='<div class="loading"><div style="font-size:28px">⚠️</div>Bağlantı hatası.</div>';
-  }
+    document.getElementById("foot").innerText="Son güncelleme: "+new Date().toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  }catch(e){document.getElementById("content").innerHTML='<div class="load"><div style="font-size:26px">⚠️</div>Bağlantı hatası.</div>';}
 }
-
-async function refresh(){rbtn.classList.add('spin');await load();rbtn.classList.remove('spin');}
-updateHdr();
-load();
+async function refresh(){rbtn.classList.add("spin");await load();rbtn.classList.remove("spin");}
+updHdr();load();
 setInterval(load,30000);
 </script>
 </body>
