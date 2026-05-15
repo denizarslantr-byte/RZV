@@ -91,6 +91,7 @@ function doGet(e){
   if(a==="deleteHotel")         return deleteHotel(e);
   if(a==="getReservations")     return getReservations(e);
   if(a==="cancelReservation")   return setStatus(e.parameter.id,"CANCELLED","USER");
+  if(a==="deleteReservation")   return deleteReservation(e);
   if(a==="getStaff")            return getStaff();
   if(a==="getPlakalar")        return getPlakalar();
   if(a==="deletePlaka")        return deletePlaka(e);
@@ -319,6 +320,8 @@ function updateRes(e){
       s.getRange(i+1,8).setValue(b.nation||"");
       s.getRange(i+1,9).setValue(b.notes||"");
       s.getRange(i+1,10).setValue(b.status||"UPDATED");
+      if(b.kart !== undefined) s.getRange(i+1,11).setValue(b.kart||"");
+      if(b.ayak !== undefined) s.getRange(i+1,12).setValue(b.ayak||"");
       s.getRange(i+1,21).setValue(new Date());
       logA("UPDATE_RES","CENTER",b.id);
       return jr({success:true});
@@ -349,6 +352,21 @@ function updateOps(e){
     }
   }
   return jr({success:false});
+}
+
+function deleteReservation(e){
+  const id = String(e.parameter.id||"");
+  if(!id) return jr({success:false,message:"ID yok"});
+  const s=sh(SH_REZ), d=s.getDataRange().getValues();
+  for(let i=d.length-1;i>=1;i--){
+    if(String(d[i][0])===id){
+      const details = [d[i][4], td(d[i][1]), tt(d[i][2])].join(" ");
+      s.deleteRow(i+1);
+      logA("DELETE_RES","USER",id+" "+details);
+      return jr({success:true});
+    }
+  }
+  return jr({success:false,message:"Rezervasyon bulunamadi"});
 }
 
 function setStatus(id,status,user){
