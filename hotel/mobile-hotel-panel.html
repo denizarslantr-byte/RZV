@@ -43,7 +43,7 @@
       <input type="hidden" id="editingId">
       <div class="grid grid2">
         <div><label>Tarih</label><input type="date" id="entryDate"></div>
-        <div><label>Saat</label><input type="time" id="entryTime"></div>
+        <div><label>Saat</label><input type="text" id="entryTime" placeholder="13:30" inputmode="numeric" maxlength="5" autocomplete="off" style="font-size:18px;font-weight:700;letter-spacing:2px" oninput="formatTime(this)"></div>
         <div><label>Yetişkin</label><input type="number" id="entryAdult" value="2" min="0"></div>
         <div><label>Çocuk</label><input type="number"    id="entryChild" value="0" min="0"></div>
       </div>
@@ -85,6 +85,12 @@
 <script src="../assets/common.js"></script>
 <script>
 showApiWarning();
+
+function formatTime(el) {
+  let v = el.value.replace(/[^0-9]/g, '');
+  if (v.length > 2) v = v.slice(0,2) + ':' + v.slice(2,4);
+  el.value = v;
+}
 
 const hotel = localStorage.getItem("hotel");
 const code  = localStorage.getItem("hotelCode");

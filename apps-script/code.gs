@@ -27,6 +27,7 @@ const SH_IZIN     = "IZIN";
 const SH_OTELLER  = "OTELLER";
 const SH_AYARLAR  = "AYARLAR";
 const SH_LOGS     = "LOGS";
+const SH_PLAKALAR = "PLAKALAR";
 
 function jr(d){ return ContentService.createTextOutput(JSON.stringify(d)).setMimeType(ContentService.MimeType.JSON); }
 function sh(n){ return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(n); }
@@ -91,6 +92,9 @@ function doGet(e){
   if(a==="getReservations")     return getReservations(e);
   if(a==="cancelReservation")   return setStatus(e.parameter.id,"CANCELLED","USER");
   if(a==="getStaff")            return getStaff();
+  if(a==="getPlakalar")        return getPlakalar();
+  if(a==="deletePlaka")        return deletePlaka(e);
+  if(a==="getPlakaRapor")      return getPlakaRapor(e);
   if(a==="deleteStaff")         return deleteStaff(e);
   if(a==="getLogs")             return getLogs(e);
   if(a==="getStats")            return getStats(e);
@@ -109,6 +113,8 @@ function doPost(e){
   if(a==="updateReservation")    return updateRes(e);
   if(a==="updateReservationOps") return updateOps(e);
   if(a==="addStaff")             return addStaff(e);
+  if(a==="addPlaka")            return addPlaka(e);
+  if(a==="updatePlaka")         return updatePlaka(e);
   if(a==="updateStaff")          return updateStaff(e);
   if(a==="setStaffOff")          return setStaffOff(e);
   if(a==="changePin")            return changePin(e);
@@ -229,9 +235,9 @@ function addRes(e){
     b.kart||"",     // KART
     b.ayak||"",     // AYAK
     b.staff1||"", b.staff2||"", b.staff3||"", b.staff4||"", // T1-T4
-    b.girdi?true:false,  // GIRDI (boolean)
-    b.cikti?true:false,  // CIKTI (boolean)
-    b.satis?true:false,  // SATIS (boolean)
+    b.girdi?true:false,   // GIRDI
+    b.cikti?true:false,   // CIKTI
+    b.satis?true:false,   // SATIS
     new Date(), new Date()
   ]);
   logA("ADD_RES",b.hotel||"CENTER",b.hotel+" "+b.date+" "+b.time);
@@ -512,6 +518,96 @@ function getStaffPerformance(e){
     });
   }
   return jr(Object.entries(perf).map(([name,v])=>({name,count:v.count,pax:v.pax})).sort((a,b)=>b.count-a.count));
+}
+
+
+// ── Plaka ─────────────────────────────────────────────────────
+// PLAKALAR: ID(0) PLAKA(1) MARKA_MODEL(2) AKTIF(3) CREATED_AT(4)
+function getPlakalar(){
+  const s=sh(SH_PLAKALAR);
+  if(!s) return jr([]);
+  const d=s.getDataRange().getValues();
+  const r=[];
+  for(let i=1;i<d.length;i++){
+    if(!d[i][0]) continue;
+    const aktif=d[i][3]===true||String(d[i][3]).toUpperCase()==="TRUE";
+    r.push({id:d[i][0],plaka:d[i][1],model:d[i][2]||"",status:aktif?"ACTIVE":"INACTIVE"});
+  }
+  r.sort((a,b)=>String(a.plaka).localeCompare(String(b.plaka),"tr"));
+  return jr(r);
+}
+
+function addPlaka(e){
+  const b=JSON.parse(e.postData.contents);
+  const id=new Date().getTime();
+  sh(SH_PLAKALAR).appendRow([id,b.plaka.toUpperCase(),b.model||"",true,new Date()]);
+  logA("ADD_PLAKA","CENTER",b.plaka);
+  return jr({success:true,id});
+}
+
+function updatePlaka(e){
+  const b=JSON.parse(e.postData.contents);
+  const s=sh(SH_PLAKALAR),d=s.getDataRange().getValues();
+  for(let i=1;i<d.length;i++){
+    if(String(d[i][0])===String(b.id)){
+      if(b.plaka !==undefined) s.getRange(i+1,2).setValue(b.plaka.toUpperCase());
+      if(b.model !==undefined) s.getRange(i+1,3).setValue(b.model);
+      if(b.status!==undefined) s.getRange(i+1,4).setValue(b.status==="ACTIVE");
+      logA("UPDATE_PLAKA","CENTER",b.plaka||b.id);
+      return jr({success:true});
+    }
+  }
+  return jr({success:false});
+}
+
+function deletePlaka(e){
+  const s=sh(SH_PLAKALAR),d=s.getDataRange().getValues();
+  for(let i=1;i<d.length;i++){
+    if(String(d[i][0])===String(e.parameter.id)){
+      const name=d[i][1];
+      s.deleteRow(i+1);
+      logA("DELETE_PLAKA","CENTER",name);
+      return jr({success:true});
+    }
+  }
+  return jr({success:false});
+}
+
+// Plaka kullanım raporu
+function getPlakaRapor(e){
+  const startDate=e.parameter.startDate||"";
+  const endDate  =e.parameter.endDate  ||"";
+  const d=sh(SH_REZ).getDataRange().getValues();
+  const stats={}; // plaka → {count, dates[]}
+
+  for(let i=1;i<d.length;i++){
+    if(!d[i][0]) continue;
+    const plaka=String(d[i][11]||"").trim(); // AYAK sütunu = PLAKA
+    if(!plaka) continue;
+    if(String(d[i][9])==="CANCELLED") continue;
+    const date=td(d[i][1]);
+    if(startDate&&date<startDate) continue;
+    if(endDate  &&date>endDate)   continue;
+    if(!stats[plaka]) stats[plaka]={count:0,dates:[],hotels:{}};
+    stats[plaka].count++;
+    if(!stats[plaka].dates.includes(date)) stats[plaka].dates.push(date);
+    const hotel=String(d[i][4]||"");
+    stats[plaka].hotels[hotel]=(stats[plaka].hotels[hotel]||0)+1;
+  }
+
+  const result=Object.entries(stats).map(([plaka,v])=>{
+    const sorted=v.dates.sort();
+    return{
+      plaka,
+      count:   v.count,
+      gunSayisi:v.dates.length,
+      ilkKullanim:sorted[0]||"",
+      sonKullanim:sorted[sorted.length-1]||"",
+      oteller:v.hotels
+    };
+  }).sort((a,b)=>b.count-a.count);
+
+  return jr(result);
 }
 
 // ── Log ──────────────────────────────────────────────────────

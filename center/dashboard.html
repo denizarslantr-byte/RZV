@@ -6,9 +6,26 @@
   <title>Piano Deri Merkez V6.1</title>
   <link rel="stylesheet" href="../assets/piano-theme.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+  #newResNotif{position:fixed;bottom:20px;left:20px;background:rgba(20,83,45,.97);border:1px solid rgba(34,197,94,.6);border-radius:14px;padding:13px 18px;z-index:9998;min-width:260px;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,.6);display:none;cursor:pointer}
+  #newResNotif .nr-title{font-size:13px;font-weight:800;color:#bbf7d0;margin-bottom:6px;display:flex;align-items:center;gap:7px}
+  #newResNotif .nr-list{font-size:12px;color:#86efac;line-height:1.8}
+  #newResNotif .nr-close{position:absolute;top:8px;right:10px;color:#86efac;font-size:14px;cursor:pointer;opacity:.7}
+  #newResNotif .nr-close:hover{opacity:1}
+  @keyframes blink-row{0%,100%{opacity:1}50%{opacity:0.1}}
+  .row-new-blink{animation:blink-row 0.5s ease-in-out 6}
+  </style>
 </head>
 <body>
 <div class="app">
+
+<!-- Yeni rezervasyon bildirimi -->
+<div id="newResNotif" onclick="goToNewRes()">
+  <span class="nr-close" onclick="event.stopPropagation();closeNotif()">✕</span>
+  <div class="nr-title">🔔 Yeni Rezervasyon!</div>
+  <div class="nr-list" id="nrList"></div>
+  <div style="font-size:10px;color:#6ee7a0;margin-top:6px;opacity:.7">Tıklayarak görüntüleyin →</div>
+</div>
 
   <div class="app-brand">
     <div class="p">P</div>
@@ -28,7 +45,10 @@
       </div>
       <button class="btn-dark btn-sm" onclick="loadAll()">↺</button>
       <div style="flex:1"></div>
-      <button class="btn-gold btn-sm" onclick="exportXLS()" style="padding:8px 14px">⬇ Dışa Aktar (.xls)</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn-gold btn-sm" onclick="exportXLS('all')" style="padding:8px 12px" title="O günkü tüm rezervasyonlar">⬇ Tümü</button>
+        <button class="btn-gold btn-sm" onclick="exportXLS('new')" style="padding:8px 12px;background:linear-gradient(135deg,#4ade80,#16a34a);color:#052e16" title="Son exporttan sonra eklenenler (iptal hariç)">⬇ Yeni</button>
+      </div>
     </div>
   </div>
 
@@ -41,6 +61,7 @@
       <button id="mnRapor"  class="btn-dark" onclick="showSection('raporSection','mnRapor');loadRapor()">📊 Raporlar</button>
       <button id="mnStaff"  class="btn-dark" onclick="showSection('staffSection','mnStaff')">👥 Personeller</button>
       <button id="mnOff"    class="btn-dark" onclick="showSection('offSection','mnOff')">🏖 İzin Girişi</button>
+      <button id="mnPlaka"  class="btn-dark" onclick="showSection('plakaSection','mnPlaka')">🚗 Araçlar</button>
       <hr class="divider">
       <button class="btn-dark" onclick="location.href='../admin/admin.html'">⚙️ Admin</button>
       <button class="btn-dark" onclick="location.href='../hotel/login.html'">🏨 Otel</button>
@@ -72,7 +93,12 @@
             <div><label>Yetişkin</label><input type="number" id="centerAdult" value="2" min="0"></div>
             <div><label>Çocuk</label><input type="number" id="centerChild" value="0" min="0"></div>
             <div><label>Kart</label><input id="centerKart" placeholder="Kart türü"></div>
-            <div><label>Ayak</label><input id="centerAyak" placeholder="Ayak türü"></div>
+            <div>
+              <label>Plaka</label>
+              <select id="centerPlaka">
+                <option value="">Plaka seçin</option>
+              </select>
+            </div>
           </div>
           <br>
           <label>Not</label>
@@ -139,6 +165,19 @@
             <b id="offDateLabel" style="color:var(--gold2)"></b> tarihinde izinli personel:
           </div>
           <div id="offCurrentList" class="staff-list"></div>
+        </div>
+      </section>
+
+      <!-- ARAÇLAR -->
+      <section id="plakaSection" class="section">
+        <div class="panel-card">
+          <div class="top-bar"><h2>🚗 Araç Yönetimi</h2></div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <input id="plakaGir" placeholder="Plaka (örn: 07ABC123)" style="flex:1;min-width:140px">
+            <input id="modelGir" placeholder="Marka/Model (örn: Ford Transit)" style="flex:1;min-width:140px">
+            <button class="btn-gold" onclick="addPlaka()">+ Ekle</button>
+          </div>
+          <div id="plakaList"></div>
         </div>
       </section>
 
@@ -210,7 +249,7 @@
 <script>
 showApiWarning();
 
-let reservations = [], staff = [], hotels = [];
+let reservations = [], staff = [], hotels = [], plakalar = [];
 const today = todayStr();
 datePicker.value  = today;
 centerDate.value  = today;
@@ -244,15 +283,20 @@ function showSection(id, btnId) {
 // ── Veri Yükleme ──────────────────────────────────────────────
 async function loadAll() {
   updateDateDisplay();
-  [reservations, staff, hotels] = await Promise.all([
+  [reservations, staff, hotels, plakalar] = await Promise.all([
     apiGet("getReservations", { date: datePicker.value }),
     apiGet("getStaff"),
-    apiGet("getHotels")
+    apiGet("getHotels"),
+    apiGet("getPlakalar")
   ]);
+  if (!Array.isArray(plakalar)) plakalar = [];
+  checkNewReservations(reservations);
   if (!Array.isArray(reservations)) reservations = [];
   if (!Array.isArray(staff))        staff = [];
   if (!Array.isArray(hotels))       hotels = [];
   renderHotelDatalist();
+  updatePlakaSelects();
+  renderPlakaList();
   renderReservations();
   renderStaffPanel();
   renderSummary();
@@ -282,6 +326,56 @@ function busySet() {
 function freeStaff()  { const b=busySet(); return staff.filter(s => s.status==="ACTIVE"&&!isOff(s)&&!b.has(s.name)); }
 function busyStaff2() { const b=busySet(); return staff.filter(s => b.has(s.name)); }
 function offStaff(d)  { return staff.filter(s => isOff(s, d)); }
+
+// Plaka dropdown seçenekleri
+function plakaOpts(current = "") {
+  const opts = ['<option value="">—</option>'];
+  plakalar.filter(p => p.status === "ACTIVE" || p.plaka === current).forEach(p => {
+    opts.push(`<option value="${p.plaka}"${p.plaka===current?" selected":""}>${p.plaka}${p.model?" ("+p.model+")":""}</option>`);
+  });
+  return opts.join("");
+}
+
+// Plaka form dropdown güncelle
+function updatePlakaSelects() {
+  const sel = document.getElementById("centerPlaka");
+  if (sel) sel.innerHTML = '<option value="">Plaka seçin</option>' +
+    plakalar.filter(p=>p.status==="ACTIVE").map(p=>`<option value="${p.plaka}">${p.plaka}${p.model?" ("+p.model+")":""}</option>`).join("");
+}
+
+// Araç listesi render
+function renderPlakaList() {
+  const el = document.getElementById("plakaList");
+  if (!el) return;
+  el.innerHTML = plakalar.map(p => `
+    <div class="panel-card" style="padding:10px 12px;margin-bottom:7px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <b style="flex:1">${p.plaka}</b>
+      <span style="color:var(--text2);font-size:12px">${p.model||""}</span>
+      <span class="badge ${p.status==="ACTIVE"?"exited":"cancelled"}">${p.status==="ACTIVE"?"AKTİF":"PASİF"}</span>
+      <button class="btn-red btn-sm" onclick="deletePlaka('${p.id}')">Sil</button>
+    </div>`).join("") || '<div style="color:var(--text2)">Araç yok.</div>';
+}
+
+// Araç ekle
+async function addPlaka() {
+  const plaka = document.getElementById("plakaGir")?.value.trim().toUpperCase();
+  const model = document.getElementById("modelGir")?.value.trim();
+  if (!plaka) return showToast("Plaka yazın","err");
+  const r = await apiPost("addPlaka", { plaka, model });
+  if (r.success) {
+    document.getElementById("plakaGir").value = "";
+    document.getElementById("modelGir").value = "";
+    showToast("✅ " + plaka + " eklendi");
+    await loadAll();
+  } else showToast("❌ Hata","err");
+}
+
+async function deletePlaka(id) {
+  if (!confirm("Araç silinsin mi?")) return;
+  await apiGet("deletePlaka", { id });
+  showToast("Araç silindi");
+  await loadAll();
+}
 
 // Dropdown seçenekleri — merkez ekranda İLK İSİM görünür
 function staffOpts(current = "") {
@@ -398,7 +492,7 @@ function renderReservations() {
             <th>Girdi</th><th>Çıktı</th><th>Çıkış St.</th><th>Satış</th>
             <th>Tarih</th><th>Saat</th><th>Otel</th>
             <th>Yet.</th><th>Çoc.</th><th>Uyruk</th><th>Not</th>
-            <th>Durum</th><th>Kart</th><th>Ayak</th>
+            <th>Durum</th><th>Kart</th><th>Plaka</th>
             <th>T1</th><th>T2</th><th>T3</th><th>T4</th>
             <th>İşlem</th>
           </tr>
@@ -421,7 +515,7 @@ function renderReservations() {
               <td style="max-width:80px;overflow:hidden;text-overflow:ellipsis">${r.notes||""}</td>
               <td>${badge(r)}</td>
               <td><input class="ci" id="kart_${r.id}" value="${r.kart||''}" ${dis}></td>
-              <td><input class="ci" id="ayak_${r.id}" value="${r.ayak||''}" ${dis}></td>
+              <td><select class="si" id="plaka_${r.id}" ${dis}>${plakaOpts(r.ayak)}</select></td>
               <td><select class="si" id="s1_${r.id}" ${dis}>${staffOpts(r.staff1)}</select></td>
               <td><select class="si" id="s2_${r.id}" ${dis}>${staffOpts(r.staff2)}</select></td>
               <td><select class="si" id="s3_${r.id}" ${dis}>${staffOpts(r.staff3)}</select></td>
@@ -476,7 +570,7 @@ async function saveOps(id) {
   await apiPost("updateReservationOps", {
     id,
     kart:       document.getElementById("kart_"+id)?.value||"",
-    ayak:       document.getElementById("ayak_"+id)?.value||"",
+    ayak:       document.getElementById("plaka_"+id)?.value||"",
     ciktiSaati: document.getElementById("csaat_"+id)?.value||"",
     satis,
     staff1:     document.getElementById("s1_"+id)?.value||"",
@@ -705,13 +799,46 @@ function renderRapor(s,e){
 }
 
 // ── Dışa Aktar ─────────────────────────────────────────────────
-function exportXLS() {
-  if (!reservations.length) return showToast("Aktarılacak rezervasyon yok","err");
+// Son export zamanını localStorage'da sakla
+function getLastExportTime() {
+  return localStorage.getItem("lastExportTime_" + datePicker.value) || null;
+}
+function setLastExportTime() {
+  localStorage.setItem("lastExportTime_" + datePicker.value, new Date().toISOString());
+}
 
+function exportXLS(mode = "all") {
   const acentaMap = {};
   hotels.forEach(h => { acentaMap[h.hotel] = h.acentaCode||""; });
 
-  // REZ_RAPOR.xls ile aynı sütun sırası
+  let list = reservations;
+
+  if (mode === "new") {
+    // İptal olanları çıkar
+    list = list.filter(r => r.status !== "CANCELLED");
+
+    // Son exporttan sonra eklenenleri al
+    const lastTime = getLastExportTime();
+    if (lastTime) {
+      const lastMs = new Date(lastTime).getTime();
+      const newOnes = list.filter(r => {
+        const createdMs = r.createdAt ? new Date(r.createdAt).getTime() : 0;
+        return createdMs > lastMs;
+      });
+      if (!newOnes.length) {
+        showToast("Son exporttan bu yana yeni rezervasyon yok", "err");
+        return;
+      }
+      list = newOnes;
+      showToast(`✅ ${list.length} yeni kayıt aktarılıyor`);
+    } else {
+      // İlk "Yeni" export — o günün iptal olmayanlarının tamamı
+      showToast(`✅ ${list.length} kayıt aktarılıyor (ilk export)`);
+    }
+  } else {
+    if (!list.length) return showToast("Aktarılacak rezervasyon yok","err");
+  }
+
   const headers = [
     "ACENTAKOD","TARIH","ACENTAADI","GRUPBASKANADI",
     "KARTNO","UYRUK",
@@ -720,24 +847,21 @@ function exportXLS() {
     "SUBEKOD","SUBEADI"
   ];
 
-  const rows = reservations.map(r => [
-    acentaMap[r.hotel] || "",          // ACENTAKOD
-    fmtDateDot(r.date),                // TARIH (GG.AA.YYYY)
-    r.hotel,                           // ACENTAADI
-    "PIANO REHBER",                    // GRUPBASKANADI
-    r.kart||"",                        // KARTNO
-    r.nation,                          // UYRUK
-    r.staff1||"",                      // SERVISCIADI
-    r.staff2||"",                      // SERVISCIADI2
-    r.staff3||"",                      // SERVISCIADI3
-    r.staff4||"",                      // SERVISCIADI4
-    Number(r.adult)||0,                // PAX
-    Number(r.child)||0,                // PAXCOCUK
-    r.time,                            // GIRIS
-    r.ciktiSaati || "",                // CIKIS
-    r.ayak ? "1.AYAK" : "",            // AYAK
-    "1",                               // SUBEKOD
-    "MERKEZ"                           // SUBEADI
+  const rows = list.map(r => [
+    acentaMap[r.hotel] || "",
+    fmtDateDot(r.date),
+    r.hotel,
+    "PIANO REHBER",
+    r.kart||"",
+    r.nation,
+    r.staff1||"", r.staff2||"", r.staff3||"", r.staff4||"",
+    Number(r.adult)||0,
+    Number(r.child)||0,
+    r.time,
+    r.ciktiSaati || "",
+    r.ayak ? "1.AYAK" : "",
+    "1",
+    "MERKEZ"
   ]);
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
@@ -746,9 +870,91 @@ function exportXLS() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "sayfa1");
   const tarih = fmtDateDot(datePicker.value).replace(/\./g,"-");
-  XLSX.writeFile(wb, `piano-deri-${tarih}.xls`, { bookType:"xls" });
+  const suffix = mode === "new" ? "-yeni" : "";
+  XLSX.writeFile(wb, `piano-deri-${tarih}${suffix}.xls`, { bookType:"xls" });
+
+  // "Yeni" exportta zamanı güncelle
+  if (mode === "new") setLastExportTime();
   showToast(`✅ Excel indirildi (${reservations.length} kayıt)`);
 }
+
+// ── Yeni Rezervasyon Bildirim Sistemi ──────────────────────────
+let knownIds   = new Set();
+let firstLoad  = true;
+let notifCtx   = null;
+
+function initAudio() {
+  try { notifCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+  catch(e) {}
+}
+
+function playNotifSound() {
+  if (!notifCtx) return;
+  try {
+    [0, 0.35, 0.7].forEach(t => {
+      const osc  = notifCtx.createOscillator();
+      const gain = notifCtx.createGain();
+      osc.connect(gain); gain.connect(notifCtx.destination);
+      osc.frequency.value = 880; osc.type = "sine";
+      gain.gain.setValueAtTime(0, notifCtx.currentTime + t);
+      gain.gain.linearRampToValueAtTime(0.3, notifCtx.currentTime + t + 0.05);
+      gain.gain.linearRampToValueAtTime(0,   notifCtx.currentTime + t + 0.25);
+      osc.start(notifCtx.currentTime + t);
+      osc.stop(notifCtx.currentTime  + t + 0.3);
+    });
+  } catch(e) {}
+}
+
+function checkNewReservations(list) {
+  if (firstLoad) {
+    list.forEach(r => knownIds.add(String(r.id)));
+    firstLoad = false;
+    return;
+  }
+  const newOnes = list.filter(r => !knownIds.has(String(r.id)));
+  newOnes.forEach(r => knownIds.add(String(r.id)));
+  if (!newOnes.length) return;
+
+  // Bildirim kutusunu doldur ve göster
+  document.getElementById("nrList").innerHTML = newOnes.map(r =>
+    `🏨 <b>${r.hotel}</b> — ${r.time} — ${(Number(r.adult)||0)+(Number(r.child)||0)} kişi`
+  ).join("<br>");
+  document.getElementById("newResNotif").style.display = "block";
+
+  // Ses çal
+  playNotifSound();
+
+  // Satırları 3 kez yanıp söndür
+  setTimeout(() => {
+    document.querySelectorAll("tr").forEach(row => {
+      if (newOnes.some(r => row.textContent.includes(String(r.id).slice(-6)))) {
+        row.classList.remove("row-new-blink");
+        void row.offsetWidth;
+        row.classList.add("row-new-blink");
+        row.addEventListener("animationend", () =>
+          row.classList.remove("row-new-blink"), { once: true });
+      }
+    });
+  }, 500);
+
+  setTimeout(closeNotif, 5000);
+}
+
+function closeNotif() {
+  document.getElementById("newResNotif").style.display = "none";
+}
+
+function goToNewRes() {
+  closeNotif();
+  showSection("homeSection","mnHome");
+  setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior:"smooth" }), 200);
+}
+
+// Ses izni için ilk tıklamada başlat
+document.addEventListener("click", function initOnce() {
+  initAudio();
+  document.removeEventListener("click", initOnce);
+}, { once: true });
 
 // ── Bootstrap ──────────────────────────────────────────────────
 loadAll();

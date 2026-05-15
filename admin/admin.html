@@ -49,6 +49,7 @@
       <button id="tab2" class="tab-btn"        onclick="openTab(2)">📊 Raporlar</button>
       <button id="tab3" class="tab-btn"        onclick="openTab(3)">📋 Log</button>
       <button id="tab4" class="tab-btn"        onclick="openTab(4)">⚙️ Ayarlar</button>
+      <button id="tab5" class="tab-btn"        onclick="openTab(5);loadPlakaRapor()">🚗 Araç Raporu</button>
     </div>
 
     <!-- TAB 1: Oteller -->
@@ -136,6 +137,25 @@
             <tr><td colspan="4" style="text-align:center;color:var(--text2)">Filtreleyin ve "Getir" e basın.</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- TAB 5: Araç Raporu -->
+    <div id="tabContent5" style="display:none">
+      <div class="panel-card">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+          <h3 style="color:var(--gold2);margin:0;flex:1">🚗 Araç Kullanım Raporu</h3>
+          <button class="btn-dark btn-sm" onclick="setPlakaRange('today')">Bugün</button>
+          <button class="btn-dark btn-sm" onclick="setPlakaRange('week')">Bu Hafta</button>
+          <button class="btn-dark btn-sm" onclick="setPlakaRange('month')">Bu Ay</button>
+          <input type="date" id="pRStart" style="width:135px">
+          <span style="color:var(--text2)">—</span>
+          <input type="date" id="pREnd" style="width:135px">
+          <button class="btn-gold btn-sm" onclick="loadPlakaRapor()">Uygula</button>
+        </div>
+        <div id="plakaRaporContent">
+          <div style="color:var(--text2);text-align:center;padding:20px">Yükleniyor...</div>
+        </div>
       </div>
     </div>
 
@@ -232,7 +252,7 @@ function adminLogout() {
 
 // ── Tab ────────────────────────────────────────────────────────
 function openTab(n) {
-  [1,2,3,4].forEach(i => {
+  [1,2,3,4,5].forEach(i => {
     document.getElementById("tabContent"+i).style.display = i===n?"block":"none";
     document.getElementById("tab"+i).classList.toggle("active", i===n);
   });
@@ -468,6 +488,77 @@ function exportLogs() {
   const headers="Tarih,İşlem,Kullanıcı,Detay";
   const rows=logsCache.map(l=>`"${String(l.date).slice(0,19)}","${l.action||""}","${l.user||""}","${String(l.details||"").replace(/"/g,'""')}"`);
   exportCSV(headers, rows, `piano-log-${todayStr()}.csv`);
+}
+
+// ── Araç Raporu ───────────────────────────────────────────────
+let pStart = "", pEnd = "";
+
+function setPlakaRange(range) {
+  const t = todayStr();
+  if (range==="today") { pStart=t; pEnd=t; }
+  else if (range==="week")  { pStart=weekStart(t); pEnd=t; }
+  else if (range==="month") { pStart=monthStart(t); pEnd=t; }
+  document.getElementById("pRStart").value = pStart;
+  document.getElementById("pREnd").value   = pEnd;
+  loadPlakaRapor();
+}
+
+async function loadPlakaRapor() {
+  const s = document.getElementById("pRStart")?.value || todayStr();
+  const e = document.getElementById("pREnd")?.value   || todayStr();
+  pStart=s; pEnd=e;
+  document.getElementById("plakaRaporContent").innerHTML =
+    '<div style="color:var(--text2);text-align:center;padding:20px">Yükleniyor...</div>';
+
+  const data = await apiGet("getPlakaRapor", { startDate:s, endDate:e });
+  renderPlakaRapor(data, s, e);
+}
+
+function renderPlakaRapor(data, s, e) {
+  const el = document.getElementById("plakaRaporContent");
+  if (!data || !data.length) {
+    el.innerHTML = '<div style="color:var(--text2);text-align:center;padding:24px">Bu dönemde araç kullanımı yok.</div>';
+    return;
+  }
+
+  const maxCount = data[0].count || 1;
+
+  el.innerHTML = `
+    <div class="stat-cards" style="margin-bottom:14px">
+      <div class="stat-card"><div class="s-val">${data.length}</div><div class="s-lbl">Aktif Araç</div></div>
+      <div class="stat-card"><div class="s-val">${data.reduce((s,x)=>s+x.count,0)}</div><div class="s-lbl">Toplam Sefer</div></div>
+      <div class="stat-card"><div class="s-val" style="font-size:16px">${data[0]?.plaka||"—"}</div><div class="s-lbl">En Çok Kullanan</div></div>
+      <div class="stat-card"><div class="s-val">${data[0]?.gunSayisi||0}</div><div class="s-lbl">Gün (En Aktif)</div></div>
+    </div>
+
+    <div class="panel-card table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Plaka</th><th>Sefer</th><th>Gün</th>
+            <th>İlk Kullanım</th><th>Son Kullanım</th><th>Yoğunluk</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map((p,i) => `
+            <tr>
+              <td style="color:var(--text2)">${i+1}</td>
+              <td><b style="color:var(--gold2)">${p.plaka}</b></td>
+              <td><b>${p.count}</b></td>
+              <td>${p.gunSayisi}</td>
+              <td style="color:var(--text2);font-size:11px">${fmtDate(p.ilkKullanim)||"—"}</td>
+              <td style="color:var(--text2);font-size:11px">${fmtDate(p.sonKullanim)||"—"}</td>
+              <td style="min-width:100px">
+                <div style="background:rgba(255,255,255,.05);border-radius:4px;height:18px;overflow:hidden">
+                  <div style="height:100%;background:linear-gradient(90deg,#a07830,#f1d48a);width:${Math.round(p.count/maxCount*100)}%;border-radius:4px"></div>
+                </div>
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 // ── Ayarlar: PIN Değiştir ──────────────────────────────────────
