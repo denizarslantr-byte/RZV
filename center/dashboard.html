@@ -13,7 +13,7 @@
   #newResNotif .nr-close{position:absolute;top:8px;right:10px;color:#86efac;font-size:14px;cursor:pointer;opacity:.7}
   #newResNotif .nr-close:hover{opacity:1}
   @keyframes blink-row{0%,100%{opacity:1}50%{opacity:0.1}}
-  .row-new-blink{animation:blink-row 0.5s ease-in-out 6}
+  .row-new-blink{animation:blink-row 0.5s ease-in-out 12}
   </style>
 </head>
 <body>
@@ -924,18 +924,23 @@ function checkNewReservations(list) {
   // Ses çal
   playNotifSound();
 
-  // Satırları 3 kez yanıp söndür
+  // Satırları 6 saniye yanıp söndür
   setTimeout(() => {
-    document.querySelectorAll("tr").forEach(row => {
-      if (newOnes.some(r => row.textContent.includes(String(r.id).slice(-6)))) {
-        row.classList.remove("row-new-blink");
-        void row.offsetWidth;
-        row.classList.add("row-new-blink");
-        row.addEventListener("animationend", () =>
-          row.classList.remove("row-new-blink"), { once: true });
-      }
+    newOnes.forEach(r => {
+      // ID'yi data attribute ile bul
+      const allTds = document.querySelectorAll("td");
+      allTds.forEach(td => {
+        if (td.closest("tr") && td.textContent.trim() === String(r.time)) {
+          const row = td.closest("tr");
+          if (row && row.textContent.includes(r.hotel.slice(0,5))) {
+            row.classList.remove("row-new-blink");
+            void row.offsetWidth;
+            row.classList.add("row-new-blink");
+          }
+        }
+      });
     });
-  }, 500);
+  }, 600);
 
   setTimeout(closeNotif, 5000);
 }
