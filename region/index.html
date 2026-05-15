@@ -1,69 +1,213 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Bölgeci Otel Rezervasyon Listesi</title>
-<link rel="stylesheet" href="../assets/piano-theme.css">
-<style>
-  .list-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
-  .hotel-block{margin-bottom:12px;border:1px solid var(--b2);border-radius:16px;overflow:hidden;background:var(--bg3)}
-  .hotel-title{padding:11px 14px;background:rgba(216,170,75,.09);border-bottom:1px solid var(--b2);font-weight:900;color:var(--gold2);display:flex;justify-content:space-between;gap:8px}
-  .mini-row{display:grid;grid-template-columns:70px 1fr 46px 46px;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--b2);font-size:13px}
-  .mini-row:last-child{border-bottom:0}
-  .pillbox{width:22px;height:22px;border:1px solid rgba(255,255,255,.22);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-weight:900}
-  .dot{width:8px;height:8px;background:#facc15;border-radius:50%;display:block}
-  .filled{background:#4ade80;border-color:#4ade80}
-  .empty-msg{padding:12px 14px;color:var(--text2);font-size:12px}
-  .legend{display:flex;gap:10px;flex-wrap:wrap;color:var(--text2);font-size:12px}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Piano Deri — Bölgeci</title>
+  <style>
+    :root{--gold:#d8aa4b;--gold2:#f1d48a;--bg:#080808;--bg2:rgba(18,19,24,.98);--bg3:rgba(28,29,38,.95);--text:#f0f0f0;--text2:#9a9a9a;--b:rgba(216,170,75,.3);--b2:rgba(255,255,255,.08)}
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    html,body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:14px;min-height:100vh}
+    .hdr{background:var(--bg2);border-bottom:1px solid var(--b);padding:12px 14px;position:sticky;top:0;z-index:100;backdrop-filter:blur(14px)}
+    .hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .brand{display:flex;align-items:center;gap:8px}
+    .brand .p{font-family:Georgia,serif;color:var(--gold2);font-size:26px;line-height:1}
+    .brand .n{font-family:Georgia,serif;color:var(--text);font-size:12px;letter-spacing:2px}
+    .brand .s{color:var(--gold);font-size:9px;letter-spacing:2px}
+    .rbtn{background:rgba(216,170,75,.12);border:1px solid var(--b);color:var(--gold2);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer}
+    .rbtn.spin{animation:spin .6s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .dnav{display:flex;align-items:center;gap:7px}
+    .darr{background:rgba(255,255,255,.06);border:1px solid var(--b2);color:var(--text2);border-radius:7px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;flex-shrink:0}
+    .darr:active{background:rgba(255,255,255,.14)}
+    .dlbl{flex:1;text-align:center;cursor:pointer}
+    .dlbl .date{font-size:14px;font-weight:700;color:var(--gold2)}
+    .dlbl .day{font-size:10px;color:var(--text2);margin-top:1px}
+    .tbtn{background:rgba(216,170,75,.1);border:1px solid rgba(216,170,75,.3);color:var(--gold);border-radius:7px;padding:0 10px;height:34px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+    #hd{position:absolute;opacity:0;width:0;height:0}
+
+    .sum{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding:10px 12px;background:#0d0d1a;border-bottom:1px solid var(--b2)}
+    .sc{background:var(--bg3);border:1px solid var(--b2);border-radius:11px;padding:9px 5px;text-align:center}
+    .sv{font-size:22px;font-weight:900;line-height:1.1;margin-bottom:2px}
+    .sl{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
+    .c0{color:var(--gold2)}.c1{color:#d1d5db}.c2{color:#fde68a}.c3{color:#bbf7d0}
+
+    .content{padding:10px 12px 80px}
+
+    /* Otel kartı */
+    .hotel-card{background:var(--bg3);border:1px solid var(--b2);border-radius:13px;overflow:hidden;margin-bottom:10px}
+
+    /* Otel başlığı: isim + durum rozetleri */
+    .hotel-hdr{background:rgba(0,0,0,.35);padding:9px 12px;border-bottom:1px solid var(--b2);display:flex;align-items:center;gap:8px}
+    .hotel-icon{font-size:14px;flex-shrink:0}
+    .hotel-name{font-size:12px;font-weight:700;color:var(--gold2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+    /* Durum rozetleri otel adı yanında */
+    .hotel-badges{display:flex;gap:4px;flex-shrink:0}
+    .hb{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;border:1.5px solid}
+    .hb-i{background:rgba(234,179,8,.25);border-color:rgba(234,179,8,.7);color:#fde68a}   /* İçeride - sarı */
+    .hb-c{background:rgba(34,197,94,.25);border-color:rgba(34,197,94,.7);color:#4ade80}   /* Çıktı - yeşil */
+    .hb-s{background:rgba(56,189,248,.25);border-color:rgba(56,189,248,.7);color:#7dd3fc}  /* Satış - mavi */
+
+    /* Rezervasyon satırı */
+    .res-row{display:flex;align-items:stretch;border-bottom:1px solid rgba(255,255,255,.04);min-height:42px}
+    .res-row:last-child{border-bottom:0}
+
+    /* Durum kutusu - tam boy */
+    .res-status{width:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;border-right:1px solid rgba(255,255,255,.06)}
+    .rs-pending {background:rgba(31,41,55,.5);color:var(--text2)}
+    .rs-inside  {background:rgba(234,179,8,.2);color:#fde68a}
+    .rs-done    {background:rgba(34,197,94,.18);color:#4ade80}
+    .rs-cancelled{background:rgba(239,68,68,.12);color:#f87171}
+
+    /* Satış kutusu - tam boy */
+    .res-satis{width:30px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;border-right:1px solid rgba(255,255,255,.06)}
+    .rs-satis-on {background:rgba(56,189,248,.2);color:#7dd3fc}
+    .rs-satis-off{background:transparent;color:transparent}
+
+    .res-info{flex:1;padding:8px 10px;display:flex;align-items:center;gap:10px}
+    .res-time{font-size:14px;font-weight:900;color:var(--gold2);min-width:40px}
+    .res-detail{flex:1}
+    .res-pax{font-size:12px;color:var(--text);font-weight:600}
+    .res-nat{font-size:10px;color:var(--text2);margin-top:1px}
+
+    .loading{display:flex;align-items:center;justify-content:center;padding:50px 20px;flex-direction:column;gap:12px;color:var(--text2)}
+    .spinner{width:26px;height:26px;border:2px solid var(--b2);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite}
+    .footer{text-align:center;font-size:10px;color:var(--text2);padding:6px;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--b2)}
+  </style>
 </head>
 <body>
-<div class="app">
-  <div class="app-brand"><div class="p">P</div><div class="name">PIANO DERİ</div><div class="sub">BÖLGECİ OTEL VE REZERVASYON LİSTESİ</div></div>
-  <div id="apiWarning" class="notice" style="display:none"></div>
-  <div class="panel-card">
-    <div class="list-head">
-      <button class="btn-dark btn-sm" onclick="location.href='../center/dashboard.html'">← Merkez</button>
-      <label style="margin:0">Tarih</label><input type="date" id="d" onchange="load()" style="width:155px">
-      <button class="btn-gold btn-sm" onclick="load()">↺ Yenile</button>
-      <div style="flex:1"></div>
-      <div class="legend"><span>Satış: <span class="pillbox"><span class="dot"></span></span></span><span>İçeride: boş kutu</span><span>Çıktı: <span class="pillbox filled"></span></span></div>
-    </div>
-    <div id="summary" style="color:var(--text2);font-size:13px"></div>
+<div class="hdr">
+  <div class="hdr-top">
+    <div class="brand"><div class="p">P</div><div><div class="n">PIANO DERİ</div><div class="s">BÖLGECİ PANELİ</div></div></div>
+    <div class="rbtn" id="rbtn" onclick="refresh()">↺</div>
   </div>
-  <div id="list"></div>
+  <div class="dnav">
+    <div class="darr" onclick="changeDay(-1)">‹</div>
+    <div class="dlbl" onclick="openPicker()"><div class="date" id="dlbl"></div><div class="day" id="dwlbl"></div></div>
+    <div class="darr" onclick="changeDay(1)">›</div>
+    <div class="tbtn" onclick="goToday()">Bugün</div>
+  </div>
+  <input type="date" id="hd" onchange="onPick()">
 </div>
+
+<div class="sum">
+  <div class="sc"><div class="sv c0" id="sv-total">—</div><div class="sl">Toplam</div></div>
+  <div class="sc"><div class="sv c1" id="sv-pending">—</div><div class="sl">Bekleyen</div></div>
+  <div class="sc"><div class="sv c2" id="sv-inside">—</div><div class="sl">İçeride</div></div>
+  <div class="sc"><div class="sv c3" id="sv-done">—</div><div class="sl">Tamamlandı</div></div>
+</div>
+
+<div class="content" id="content">
+  <div class="loading"><div class="spinner"></div>Yükleniyor...</div>
+</div>
+<div class="footer" id="footer"></div>
+
 <script src="../config/config.js"></script>
 <script src="../assets/common.js"></script>
 <script>
-showApiWarning();
-d.value = todayStr();
-let hotels=[], reservations=[];
-function pax(r){return (Number(r.adult)||0)+(Number(r.child)||0)}
-function inBox(r){
-  const exited=String(r.cikti).toUpperCase()==='TRUE';
-  return `<span class="pillbox ${exited?'filled':''}">${exited?'':''}</span>`;
+const DAYS=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+let curDate=todayStr(), all=[];
+
+function fmt(iso){if(!iso)return'';const p=iso.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+function updateHdr(){const d=new Date(curDate+'T00:00:00');dlbl.innerText=fmt(curDate);dwlbl.innerText=DAYS[d.getDay()];hd.value=curDate;}
+function changeDay(n){curDate=addDays(curDate,n);updateHdr();load();}
+function goToday(){curDate=todayStr();updateHdr();load();}
+function openPicker(){hd.click();}
+function onPick(){if(hd.value){curDate=hd.value;updateHdr();load();}}
+
+function status(r){
+  if(r.status==='CANCELLED') return 'cancelled';
+  if(String(r.cikti).toUpperCase()==='TRUE') return 'done';
+  if(String(r.girdi).toUpperCase()==='TRUE') return 'inside';
+  return 'pending';
 }
-function saleBox(r){return `<span class="pillbox">${String(r.satis).toUpperCase()==='TRUE'?'<span class="dot"></span>':''}</span>`}
+
+function updateStats(){
+  sv_total.innerText   = all.length;
+  sv_pending.innerText = all.filter(r=>status(r)==='pending').length;
+  sv_inside.innerText  = all.filter(r=>status(r)==='inside').length;
+  sv_done.innerText    = all.filter(r=>status(r)==='done').length;
+}
+
 function render(){
-  const active = reservations.filter(r=>r.status!=='CANCELLED');
-  summary.innerHTML = `${fmtDate(d.value)} · ${active.length} rezervasyon · ${active.reduce((s,r)=>s+pax(r),0)} pax`;
-  const byHotel = {}; active.forEach(r=>{(byHotel[r.hotel] ||= []).push(r)});
-  const allHotels = hotels.map(h=>h.hotel).filter(Boolean).sort((a,b)=>a.localeCompare(b,'tr'));
-  list.innerHTML = allHotels.map(h=>{
-    const rows=(byHotel[h]||[]).sort((a,b)=>String(a.time).localeCompare(String(b.time)));
-    return `<div class="hotel-block"><div class="hotel-title"><span>🏨 ${h}</span><span>${rows.length?rows.length+' kayıt':'—'}</span></div>` +
-      (rows.length ? rows.map(r=>`<div class="mini-row"><b>${r.time||'--:--'}</b><span>${pax(r)} pax · ${r.nation||'—'}</span>${saleBox(r)}${inBox(r)}</div>`).join('') : `<div class="empty-msg">Bugün kayıt yok</div>`) +
-      `</div>`;
+  const el=document.getElementById('content');
+  if(!all.length){
+    el.innerHTML='<div class="loading" style="padding:40px"><div style="font-size:32px;margin-bottom:10px">📭</div>Bu tarihte rezervasyon yok.</div>';
+    return;
+  }
+
+  // Sadece o gün rezervasyonu olan oteller
+  const byHotel={};
+  all.forEach(r=>{
+    if(!byHotel[r.hotel])byHotel[r.hotel]=[];
+    byHotel[r.hotel].push(r);
+  });
+  const hotels=Object.keys(byHotel).sort();
+
+  el.innerHTML = hotels.map(hotel=>{
+    const resv=byHotel[hotel].sort((a,b)=>String(a.time).localeCompare(String(b.time)));
+
+    // Otel başlığı rozetleri
+    const hasInside  = resv.some(r=>status(r)==='inside');
+    const hasDone    = resv.some(r=>status(r)==='done');
+    const hasSatis   = resv.some(r=>String(r.satis).toUpperCase()==='TRUE'&&status(r)==='done');
+
+    const badges = `
+      ${hasInside ? '<div class="hb hb-i" title="İçeride">İ</div>' : ''}
+      ${hasDone   ? '<div class="hb hb-c" title="Çıktı">Ç</div>'   : ''}
+      ${hasSatis  ? '<div class="hb hb-s" title="Satış">S</div>'   : ''}
+    `;
+
+    const rows = resv.map(r=>{
+      const st=status(r);
+      const pax=(Number(r.adult)||0)+(Number(r.child)||0);
+      const isSatis=String(r.satis).toUpperCase()==='TRUE'&&st==='done';
+
+      const stLabel = {pending:'',inside:'İ',done:'Ç',cancelled:'✕'}[st]||'';
+      const stClass = {pending:'rs-pending',inside:'rs-inside',done:'rs-done',cancelled:'rs-cancelled'}[st];
+
+      return `<div class="res-row">
+        <div class="res-status ${stClass}">${stLabel}</div>
+        <div class="res-satis ${isSatis?'rs-satis-on':'rs-satis-off'}">S</div>
+        <div class="res-info">
+          <div class="res-time">${r.time}</div>
+          <div class="res-detail">
+            <div class="res-pax">${pax} kişi</div>
+            <div class="res-nat">${r.nation||'—'}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="hotel-card">
+      <div class="hotel-hdr">
+        <span class="hotel-icon">🏨</span>
+        <span class="hotel-name">${hotel}</span>
+        <div class="hotel-badges">${badges}</div>
+      </div>
+      ${rows}
+    </div>`;
   }).join('');
 }
+
 async function load(){
-  list.innerHTML='<div class="panel-card" style="text-align:center;color:var(--text2)">Yükleniyor...</div>';
-  const data = await Promise.all([apiGet('getHotels'), apiGet('getReservations',{date:d.value})]);
-  hotels=Array.isArray(data[0])?data[0]:[]; reservations=Array.isArray(data[1])?data[1]:[]; render();
+  document.getElementById('content').innerHTML='<div class="loading"><div class="spinner"></div>Yükleniyor...</div>';
+  try{
+    const data=await apiGet('getReservations',{date:curDate});
+    all=Array.isArray(data)?data:[];
+    updateStats();
+    render();
+    footer.innerText='Son güncelleme: '+new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }catch(e){
+    document.getElementById('content').innerHTML='<div class="loading"><div style="font-size:28px">⚠️</div>Bağlantı hatası.</div>';
+  }
 }
-load(); setInterval(load,30000);
+
+async function refresh(){rbtn.classList.add('spin');await load();rbtn.classList.remove('spin');}
+updateHdr();
+load();
+setInterval(load,30000);
 </script>
 </body>
 </html>
