@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="../assets/piano-theme.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-  #newResNotif{position:fixed;bottom:20px;left:20px;background:rgba(20,83,45,.97);border:1px solid rgba(34,197,94,.6);border-radius:14px;padding:13px 18px;z-index:9998;min-width:260px;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,.6);display:none;cursor:pointer}
+  #newResNotif{position:fixed;bottom:20px;right:20px;background:rgba(20,83,45,.97);border:1px solid rgba(34,197,94,.6);border-radius:14px;padding:13px 18px;z-index:9998;min-width:260px;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,.6);display:none;cursor:pointer}
   #newResNotif .nr-title{font-size:13px;font-weight:800;color:#bbf7d0;margin-bottom:6px;display:flex;align-items:center;gap:7px}
   #newResNotif .nr-list{font-size:12px;color:#86efac;line-height:1.8}
   #newResNotif .nr-close{position:absolute;top:8px;right:10px;color:#86efac;font-size:14px;cursor:pointer;opacity:.7}
@@ -859,7 +859,7 @@ function exportXLS(mode = "all") {
     Number(r.child)||0,
     r.time,
     r.ciktiSaati || "",
-    r.ayak ? "1.AYAK" : "",
+    "1.AYAK",                  // her zaman sabit
     "1",
     "MERKEZ"
   ]);
